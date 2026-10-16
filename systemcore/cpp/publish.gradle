@@ -4,8 +4,7 @@ apply plugin: 'signing'
 
 ext.licenseFile = files("$rootDir/LICENSE.txt")
 
-// Retrieve version number from core navxmxp build version.txt file
-def pubVersion = rootProject.file("${System.getProperty('user.home')}/Documents/Github/navxmxp/build/version.txt").text.trim()
+def pubVersion = "2027.0.0-alpha-7.0"
 
 def outputsFolder = file("$buildDir/allOutputs")
 
@@ -39,8 +38,8 @@ copyAllOutputs.dependsOn outputVersions
 
 ext.addTaskToCopyAllOutputs = { task ->
     copyAllOutputs.dependsOn task
-    copyAllOutputs.inputs.file task.archivePath
-    copyAllOutputs.from task.archivePath
+    copyAllOutputs.inputs.file task.archiveFile
+    copyAllOutputs.from task.archiveFile
 }
 
 def baseArtifactId = 'navx-cpp'
@@ -95,7 +94,7 @@ def customizePom(pom) {
 task cppHeadersZip(type: Zip) {
     destinationDirectory = outputsFolder
     archiveBaseName = zipBaseName
-    classifier = "headers"
+    archiveClassifier = "headers"
 
     from(licenseFile) {
         into '/'
@@ -109,7 +108,7 @@ task cppHeadersZip(type: Zip) {
 task cppSourcesZip(type: Zip) {
     destinationDirectory = outputsFolder
     archiveBaseName = zipBaseName
-    classifier = "sources"
+    archiveClassifier = "sources"
 
     from(licenseFile) {
         into '/'
@@ -157,8 +156,8 @@ model {
             maven {
 				url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
 				credentials {
-					username sonatypeUsername
-					password sonatypePassword
+					username System.getenv("sonatypeUsername")
+					password System.getenv("sonatypePassword")
 				}
             }
 		}
@@ -176,28 +175,28 @@ model {
                 groupId artifactGroupId
                 version pubVersion
 
-				// create the sign pom artifact
-				pom.withXml {
-					def pomFile = file("${project.buildDir}/generated-pom.xml")
-					writeTo(pomFile)
-					def pomAscFile = signing.sign(pomFile).signatureFiles[0]
-					artifact(pomAscFile) {
-						classifier = null
-						extension = 'pom.asc'
-					}
-				}
-				// create the signed artifacts
-				project.tasks.signArchives.signatureFiles.each {
-					artifact(it) {
-						def matcher = it.file =~ /-(sources|headers|linuxathena|linuxathenadebug|linuxathenastatic|linuxathenastaticdebug|linuxraspbian|linuxraspbiandebug|linuxraspbianstatic|linuxraspbianstaticdebug|windowsx86-64|windowsx86-64debug|windowsx86-64static|windowsx86-64staticdebug)\.zip\.asc$/
-						if (matcher.find()) {
-							classifier = matcher.group(1)
-						} else {
-							classifier = null
-						}
-						extension = 'zip.asc'
-					}
-				}
+				// // create the sign pom artifact
+				// pom.withXml {
+				// 	def pomFile = file("${project.buildDir}/generated-pom.xml")
+				// 	writeTo(pomFile)
+				// 	def pomAscFile = signing.sign(pomFile).signatureFiles[0]
+				// 	artifact(pomAscFile) {
+				// 		classifier = null
+				// 		extension = 'pom.asc'
+				// 	}
+				// }
+				// // create the signed artifacts
+				// project.tasks.signArchives.signatureFiles.each {
+				// 	artifact(it) {
+				// 		def matcher = it.file =~ /-(sources|headers|linuxathena|linuxathenadebug|linuxathenastatic|linuxathenastaticdebug|linuxraspbian|linuxraspbiandebug|linuxraspbianstatic|linuxraspbianstaticdebug|windowsx86-64|windowsx86-64debug|windowsx86-64static|windowsx86-64staticdebug)\.zip\.asc$/
+				// 		if (matcher.find()) {
+				// 			classifier = matcher.group(1)
+				// 		} else {
+				// 			classifier = null
+				// 		}
+				// 		extension = 'zip.asc'
+				// 	}
+				// }
             }
         }
     }

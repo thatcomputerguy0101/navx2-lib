@@ -18,24 +18,25 @@
  */
 
 // Can't build Mau on non linux platforms.
+#include "wpi/units/frequency.hpp"
 #ifdef __linux__
 
 #include "RegisterIOMau.h"
 #include "IMURegisters.h"
 #include "delay.h"
 #include <dlfcn.h>
-#include "frc/Timer.h"
+#include <wpi/system/Timer.hpp>
 
-using namespace frc;
+using namespace wpi;
 
-RegisterIOMau::RegisterIOMau(uint8_t update_rate_hz,
+RegisterIOMau::RegisterIOMau(wpi::units::hertz_u8_t update_rate,
         IIOCompleteNotification *notify_sink,
         IBoardCapabilities *board_capabilities  ) {
-    this->update_rate_hz        = update_rate_hz;
+    this->update_rate           = update_rate;
     this->board_capabilities    = board_capabilities;
     this->notify_sink           = notify_sink;
     this->last_sensor_timestamp = 0;
-    this->last_update_time      = 0;
+    this->last_update_time      = 0_s;
     this->stop                  = false;
 
     raw_data_update = {};
@@ -72,7 +73,7 @@ RegisterIOMau::RegisterIOMau(uint8_t update_rate_hz,
 	pfunc_ReadConfigurationData =
 				  (bool (*)(uint8_t, uint8_t *, uint8_t))dlsym(dlhandle, "HAL_Mau_AHRS_ReadConfigurationData");
 
-	(*pfunc_Init)(update_rate_hz);
+	(*pfunc_Init)(update_rate.value());
     } else {
 	printf("Error opening shared libraries %s or %s\n", p_sharedlibname_debug, p_sharedlibname_release);
     }
@@ -101,7 +102,7 @@ double RegisterIOMau::GetUpdateCount() {
     return (*pfunc_GetUpdateCount)();
 }
 
-void RegisterIOMau::SetUpdateRateHz(uint8_t update_rate) {
+void RegisterIOMau::SetUpdateRate(wpi::units::hertz_u8_t update_rate) {
     // Mau AHRS Update Rate cannot be modified after initialization
 }
 
@@ -121,12 +122,12 @@ void RegisterIOMau::ZeroDisplacement() {
 void RegisterIOMau::Run() {
     GetConfiguration();
 
-    double update_rate_ms = 1.0/(double)this->update_rate_hz;
+    double update_rate_ms = 1.0/(double)this->update_rate;
 
     /* IO Loop */
     while (!stop) {
-        if ( board_state.update_rate_hz != this->update_rate_hz ) {
-            SetUpdateRateHz(this->update_rate_hz);
+        if ( board_state.update_rate_hz != this->update_rate.value() ) {
+            SetUpdateRate(this->update_rate);
         }
         if (!GetCurrentData()) {
 	        delayMillis(update_rate_ms);
@@ -268,7 +269,7 @@ bool RegisterIOMau::GetCurrentData() {
         raw_data_update.temp_c      = ahrspos_update.mpu_temp;
         notify_sink->SetRawData(raw_data_update, sensor_timestamp);
 
-        this->last_update_time = Timer::GetFPGATimestamp();
+        this->last_update_time = Timer::GetMonotonicTimestamp();
 	return true;
     }
 

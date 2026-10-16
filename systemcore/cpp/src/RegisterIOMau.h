@@ -15,10 +15,12 @@
 #include "AHRSProtocol.h"
 #include "IBoardCapabilities.h"
 #include "IIOCompleteNotification.h"
+#include <wpi/units/time.hpp>
+#include <wpi/units/frequency.hpp>
 
 class RegisterIOMau : public IIOProvider {
 private:
-    uint8_t update_rate_hz;
+    wpi::units::hertz_u8_t update_rate;
     bool stop;
     IMUProtocol::GyroUpdate raw_data_update;
     AHRSProtocol::AHRSUpdate ahrs_update;
@@ -27,7 +29,7 @@ private:
     IIOCompleteNotification::BoardState board_state;
     AHRSProtocol::BoardID board_id;
     IBoardCapabilities *board_capabilities;
-    double last_update_time;
+    wpi::units::second_t last_update_time;
     long last_sensor_timestamp;
 
     void (*pfunc_Init)(uint8_t update_rate_hz);
@@ -43,13 +45,13 @@ private:
     void *dlhandle;
 
 public:
-    RegisterIOMau( uint8_t update_rate_hz,
+    RegisterIOMau( wpi::units::hertz_u8_t update_rate,
                 IIOCompleteNotification *notify_sink,
                 IBoardCapabilities *board_capabilities  );
     bool   IsConnected();
     double GetByteCount();
     double GetUpdateCount();
-    void   SetUpdateRateHz(uint8_t update_rate);
+    void   SetUpdateRate(wpi::units::hertz_u8_t update_rate);
     void   ZeroYaw();
     void   ZeroDisplacement();
     void   Run();

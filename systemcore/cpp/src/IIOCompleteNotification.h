@@ -12,6 +12,7 @@
 
 #include "IMUProtocol.h"
 #include "AHRSProtocol.h"
+#include <wpi/units/frequency.hpp>
 
 class IIOCompleteNotification {
 public:

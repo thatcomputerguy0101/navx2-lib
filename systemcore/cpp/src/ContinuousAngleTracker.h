@@ -8,7 +8,7 @@
 #ifndef SRC_CONTINUOUSANGLETRACKER_H_
 #define SRC_CONTINUOUSANGLETRACKER_H_
 
-#include "wpi/priority_mutex.h"
+#include <wpi/util/priority_mutex.hpp>
 
 using namespace wpi;
 

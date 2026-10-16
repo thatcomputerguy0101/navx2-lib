@@ -8,19 +8,18 @@
 #ifndef SRC_AHRS_H_
 #define SRC_AHRS_H_
 
-#include "frc/smartdashboard/SendableBase.h"
-#include "frc/smartdashboard/SendableBuilder.h"
-#include "frc/I2C.h"
-#include "frc/SPI.h"
-#include "frc/SerialPort.h"
-#include "frc/PIDSource.h"
-#include "frc/Timer.h"
-#include "frc/interfaces/Gyro.h"
+#include <cstdint>
+#include <wpi/telemetry/TelemetryLoggable.hpp>
+#include <wpi/telemetry/TelemetryTable.hpp>
+#include <wpi/hardware/bus/I2C.hpp>
+#include <wpi/hardware/bus/SerialPort.hpp>
+#include <wpi/system/Timer.hpp>
 #include "ITimestampedDataSubscriber.h"
-#include "networktables/NetworkTableEntry.h"
+#include "hertz_u8.h"
+#include <wpi/nt/NetworkTableEntry.hpp>
 #include <thread>
 
-#include <hal/SimDevice.h>
+#include <wpi/hal/SimDevice.hpp>
 
 class IIOProvider;
 class ContinuousAngleTracker;
@@ -28,10 +27,7 @@ class InertialDataIntegrator;
 class OffsetTracker;
 class AHRSInternal;
 
-class AHRS : public frc::SendableBase,
-             public frc::ErrorBase,
-             public frc::PIDSource,
-             public frc::Gyro  {
+class AHRS : public wpi::telemetry::TelemetryLoggable {
 public:
 
     enum BoardAxis {
@@ -128,81 +124,81 @@ private:
     std::thread *           task;
 
     // Simulation
-    hal::SimDevice m_simDevice;
+    wpi::hal::SimDevice m_simDevice;
 
 #define MAX_NUM_CALLBACKS 3
     ITimestampedDataSubscriber *callbacks[MAX_NUM_CALLBACKS];
     void *callback_contexts[MAX_NUM_CALLBACKS];
 	
 	bool enable_boardlevel_yawreset;
-    double last_yawreset_request_timestamp;
-    double last_yawreset_while_calibrating_request_timestamp;
+    wpi::units::second_t last_yawreset_request_timestamp;
+    wpi::units::second_t last_yawreset_while_calibrating_request_timestamp;
     uint32_t successive_suppressed_yawreset_request_count;
     bool disconnect_startupcalibration_recovery_pending;
     bool logging_enabled;
 
 public:
-    AHRS(frc::SPI::Port spi_port_id);
-    AHRS(frc::I2C::Port i2c_port_id);
-    AHRS(frc::SerialPort::Port serial_port_id);
+    // AHRS(wpi::SPI::Port spi_port_id);
+    AHRS(wpi::I2C::Port i2c_port_id);
+    AHRS(wpi::SerialPort::Port serial_port_id);
 
-    AHRS(frc::SPI::Port spi_port_id, uint8_t update_rate_hz);
-    AHRS(frc::SPI::Port spi_port_id, uint32_t spi_bitrate, uint8_t update_rate_hz);
+    // AHRS(wpi::SPI::Port spi_port_id, wpi::units::hertz_u8_t update_rate);
+    // AHRS(wpi::SPI::Port spi_port_id, uint32_t spi_bitrate, wpi::units::hertz_u8_t update_rate);
 
-    AHRS(frc::I2C::Port i2c_port_id, uint8_t update_rate_hz);
+    AHRS(wpi::I2C::Port i2c_port_id, wpi::units::hertz_u8_t update_rate);
 
-    AHRS(frc::SerialPort::Port serial_port_id, AHRS::SerialDataType data_type, uint8_t update_rate_hz);
+    AHRS(wpi::SerialPort::Port serial_port_id, AHRS::SerialDataType data_type, wpi::units::hertz_u8_t update_rate);
 
-    float  GetPitch();
-    float  GetRoll();
-    float  GetYaw();
-    float  GetCompassHeading();
+    float  GetPitch() const;
+    float  GetRoll() const;
+    float  GetYaw() const;
+    float  GetCompassHeading() const;
     void   ZeroYaw();
-    bool   IsCalibrating();
-    bool   IsConnected();
-    double GetByteCount();
-    double GetUpdateCount();
-    long   GetLastSensorTimestamp();
-    float  GetWorldLinearAccelX();
-    float  GetWorldLinearAccelY();
-    float  GetWorldLinearAccelZ();
-    bool   IsMoving();
-    bool   IsRotating();
-    float  GetBarometricPressure();
-    float  GetAltitude();
-    bool   IsAltitudeValid();
-    float  GetFusedHeading();
-    bool   IsMagneticDisturbance();
-    bool   IsMagnetometerCalibrated();
-    float  GetQuaternionW();
-    float  GetQuaternionX();
-    float  GetQuaternionY();
-    float  GetQuaternionZ();
+    bool   IsCalibrating() const;
+    bool   IsConnected() const;
+    double GetByteCount() const;
+    double GetUpdateCount() const;
+    long   GetLastSensorTimestamp() const;
+    float  GetWorldLinearAccelX() const;
+    float  GetWorldLinearAccelY() const;
+    float  GetWorldLinearAccelZ() const;
+    bool   IsMoving() const;
+    bool   IsRotating() const;
+    float  GetBarometricPressure() const;
+    float  GetAltitude() const;
+    bool   IsAltitudeValid() const;
+    float  GetFusedHeading() const;
+    bool   IsMagneticDisturbance() const;
+    bool   IsMagnetometerCalibrated() const;
+    float  GetQuaternionW() const;
+    float  GetQuaternionX() const;
+    float  GetQuaternionY() const;
+    float  GetQuaternionZ() const;
     void   ResetDisplacement();
     void   UpdateDisplacement( float accel_x_g, float accel_y_g,
                                int update_rate_hz, bool is_moving );
-    float  GetVelocityX();
-    float  GetVelocityY();
-    float  GetVelocityZ();
-    float  GetDisplacementX();
-    float  GetDisplacementY();
-    float  GetDisplacementZ();
-    double GetAngle() const override;
-    double GetRate() const override;
+    float  GetVelocityX() const;
+    float  GetVelocityY() const;
+    float  GetVelocityZ() const;
+    float  GetDisplacementX() const;
+    float  GetDisplacementY() const;
+    float  GetDisplacementZ() const;
+    double GetAngle() const;
+    double GetRate() const;
     void   SetAngleAdjustment(double angle);
-    double GetAngleAdjustment();
-    void   Reset() override;
-    float  GetRawGyroX();
-    float  GetRawGyroY();
-    float  GetRawGyroZ();
-    float  GetRawAccelX();
-    float  GetRawAccelY();
-    float  GetRawAccelZ();
-    float  GetRawMagX();
-    float  GetRawMagY();
-    float  GetRawMagZ();
-    float  GetPressure();
-    float  GetTempC();
+    double GetAngleAdjustment() const;
+    void   Reset();
+    float  GetRawGyroX() const;
+    float  GetRawGyroY() const;
+    float  GetRawGyroZ() const;
+    float  GetRawAccelX() const;
+    float  GetRawAccelY() const;
+    float  GetRawAccelZ() const;
+    float  GetRawMagX() const;
+    float  GetRawMagY() const;
+    float  GetRawMagZ() const;
+    float  GetPressure() const;
+    float  GetTempC() const;
     AHRS::BoardYawAxis GetBoardYawAxis();
     std::string GetFirmwareVersion();
 
@@ -219,25 +215,18 @@ public:
     int16_t GetGyroFullScaleRangeDPS();
     int16_t GetAccelFullScaleRangeG();
 
-    // Gyro interface implementation
-    void Calibrate() override;
+    /* TelemetryLoggable implementation */
+    std::string_view GetTelemetryType() const override;
+    void LogTo(wpi::telemetry::TelemetryTable& table) const override;
 
 private:
-    void SPIInit( frc::SPI::Port spi_port_id, uint32_t bitrate, uint8_t update_rate_hz );
-    void I2CInit( frc::I2C::Port i2c_port_id, uint8_t update_rate_hz );
-    void SerialInit(frc::SerialPort::Port serial_port_id, AHRS::SerialDataType data_type, uint8_t update_rate_hz);
-    void commonInit( uint8_t update_rate_hz );
+    // void SPIInit( wpi::SPI::Port spi_port_id, uint32_t bitrate, wpi::units::hertz_u8_t update_rate );
+    void I2CInit( wpi::I2C::Port i2c_port_id, wpi::units::hertz_u8_t update_rate );
+    void SerialInit(wpi::SerialPort::Port serial_port_id, AHRS::SerialDataType data_type, wpi::units::hertz_u8_t update_rate);
+    void commonInit( wpi::units::hertz_u8_t update_rate );
     static int ThreadFunc(IIOProvider *io_provider);
 
-    /* SendableBase implementation */
-    void InitSendable(frc::SendableBuilder& builder) override;
-
-    /* PIDSource implementation */
-    double PIDGet();
-
     uint8_t GetActualUpdateRateInternal(uint8_t update_rate);
-
-    nt::NetworkTableEntry m_valueEntry;
 };
 
 #endif /* SRC_AHRS_H_ */

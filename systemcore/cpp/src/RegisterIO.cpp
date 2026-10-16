@@ -8,21 +8,24 @@
 #include "RegisterIO.h"
 #include "IMURegisters.h"
 #include "delay.h"
+#include "hertz_u8.h"
+#include <wpi/units/time.hpp>
+#include <cstdint>
 
-using namespace frc;
+using namespace wpi;
 
 RegisterIO::RegisterIO( IRegisterIO *io_provider,
-        uint8_t update_rate_hz,
+        units::hertz_u8_t update_rate,
         IIOCompleteNotification *notify_sink,
         IBoardCapabilities *board_capabilities  ) {
     this->io_provider           = io_provider;
-    this->update_rate_hz        = update_rate_hz;
+    this->update_rate           = update_rate;
     this->board_capabilities    = board_capabilities;
     this->notify_sink           = notify_sink;
     this->last_sensor_timestamp = 0;
     this->update_count 			= 0;
     this->byte_count			= 0;
-    this->last_update_time      = 0;
+    this->last_update_time      = 0_s;
     this->stop                  = false;
     this->disconnect_reported   = false;
     this->connect_reported      = true;
@@ -34,15 +37,15 @@ RegisterIO::RegisterIO( IRegisterIO *io_provider,
     board_id        = {};
 }
 
-static const double IO_TIMEOUT_SECONDS = 1.0;
-static const double DELAY_OVERHEAD_MILLISECONDS = 4.0;
+static const units::second_t IO_TIMEOUT = 1.0_s;
+static const units::millisecond_t DELAY_OVERHEAD = 4.0_ms;
 
 RegisterIO::~RegisterIO() {
 }
 
 bool RegisterIO::IsConnected() {
-    double time_since_last_update = Timer::GetFPGATimestamp() - this->last_update_time;
-    return time_since_last_update <= IO_TIMEOUT_SECONDS;
+    units::second_t time_since_last_update = Timer::GetMonotonicTimestamp() - this->last_update_time;
+    return time_since_last_update <= IO_TIMEOUT;
 }
 
 double RegisterIO::GetByteCount() {
@@ -53,8 +56,8 @@ double RegisterIO::GetUpdateCount() {
     return update_count;
 }
 
-void RegisterIO::SetUpdateRateHz(uint8_t update_rate) {
-    io_provider->Write( NAVX_REG_UPDATE_RATE_HZ, update_rate);
+void RegisterIO::SetUpdateRate(units::hertz_u8_t update_rate) {
+    io_provider->Write( NAVX_REG_UPDATE_RATE_HZ, update_rate.value());
 }
 
 void RegisterIO::ZeroYaw() {
@@ -74,21 +77,21 @@ void RegisterIO::Run() {
     io_provider->Init();
 
     /* Initial Device Configuration */
-    SetUpdateRateHz(this->update_rate_hz);
+    SetUpdateRate(this->update_rate);
     GetConfiguration();
 
-    double update_rate_ms = 1.0/(double)this->update_rate_hz;
-    if ( update_rate_ms > DELAY_OVERHEAD_MILLISECONDS) {
-    	update_rate_ms -= DELAY_OVERHEAD_MILLISECONDS;
+    units::millisecond_t update_rate = 1.0/this->update_rate;
+    if ( update_rate > DELAY_OVERHEAD) {
+    	update_rate -= DELAY_OVERHEAD;
     }
 
     /* IO Loop */
     while (!stop) {
-        if ( board_state.update_rate_hz != this->update_rate_hz ) {
-            SetUpdateRateHz(this->update_rate_hz);
+        if ( board_state.update_rate_hz != this->update_rate.value() ) {
+            SetUpdateRate(this->update_rate);
         }
         GetCurrentData();
-        delayMillis(update_rate_ms);
+        delayMillis(update_rate.value());
     }
 }
 
@@ -218,7 +221,7 @@ void RegisterIO::GetCurrentData() {
         raw_data_update.temp_c      = ahrspos_update.mpu_temp;
         notify_sink->SetRawData(raw_data_update, sensor_timestamp);
 
-        this->last_update_time = Timer::GetFPGATimestamp();
+        this->last_update_time = Timer::GetMonotonicTimestamp();
         byte_count += buffer_len;
         update_count++;
     }

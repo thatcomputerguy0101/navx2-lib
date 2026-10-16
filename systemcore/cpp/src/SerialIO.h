@@ -14,10 +14,12 @@
 #include "IMUProtocol.h"
 #include "IIOCompleteNotification.h"
 #include "IBoardCapabilities.h"
-#include "frc/SerialPort.h"
-#include "frc/smartdashboard/SmartDashboard.h"
+#include "hertz_u8.h"
+#include "wpi/units/time.hpp"
+#include <wpi/hardware/bus/SerialPort.hpp>
+#include <wpi/units/frequency.hpp>
 
-using namespace frc;
+using namespace wpi;
 
 class SerialIO : public IIOProvider {
 
@@ -29,7 +31,7 @@ class SerialIO : public IIOProvider {
     bool signal_retransmit_stream_config;
     bool stop;
     uint8_t update_type; //IMUProtocol.MSGID_XXX
-    uint8_t update_rate_hz;
+    wpi::units::hertz_u8_t update_rate;
     int byte_count;
     int update_count;
     IMUProtocol::YPRUpdate ypr_update_data;
@@ -41,7 +43,7 @@ class SerialIO : public IIOProvider {
     IIOCompleteNotification *notify_sink;
     IIOCompleteNotification::BoardState board_state;
     IBoardCapabilities *board_capabilities;
-    double last_valid_packet_time;
+    wpi::units::second_t last_valid_packet_time;
     bool is_usb;
     bool connect_reported;
     bool disconnect_reported;
@@ -49,14 +51,14 @@ class SerialIO : public IIOProvider {
 
 public:
     SerialIO( SerialPort::Port port_id,
-              uint8_t update_rate_hz,
+              wpi::units::hertz_u8_t update_rate,
               bool processed_data,
               IIOCompleteNotification *notify_sink,
               IBoardCapabilities *board_capabilities );
     bool IsConnected();
     double GetByteCount();
     double GetUpdateCount();
-    void SetUpdateRateHz(uint8_t update_rate);
+    void SetUpdateRate(wpi::units::hertz_u8_t update_rate);
     void ZeroYaw();
     void ZeroDisplacement();
     void Run();

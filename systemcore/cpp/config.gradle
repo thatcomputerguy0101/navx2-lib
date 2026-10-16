@@ -1,16 +1,10 @@
-import org.gradle.internal.os.OperatingSystem
-
-nativeUtils.withRoboRIO()
 nativeUtils.addWpiNativeUtils()
-nativeUtils.withRaspbian()
-// nativeUtils.withBionic() // Uncomment this to enable aarch64 bionic builds
+nativeUtils.withCrossLinuxArm64()
+nativeUtils.withCrossSystemCore()
 nativeUtils {
   wpi {
     configureDependencies {
-      wpiVersion = "2020.+"
-      niLibVersion = "2020.9.1"
-      opencvVersion = "3.4.7-2"
-      googleTestVersion = "1.9.0-3-437e100"
+      wpiVersion = wpilibVersion
     }
   }
 }
@@ -90,7 +84,7 @@ ext.createComponentZipTasks = { components, names, base, type, project, func ->
         def task = project.tasks.create(base + "-${key}", type) {
             description = 'Creates component archive for platform ' + key
             destinationDirectory = outputsFolder
-            classifier = key
+            archiveClassifier = key
             archiveBaseName = '_M_' + base
             duplicatesStrategy = 'exclude'
 

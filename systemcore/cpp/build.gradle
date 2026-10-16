@@ -1,9 +1,12 @@
 plugins {
   id 'cpp'
-  id 'edu.wpi.first.wpilib.repositories.WPILibRepositoriesPlugin' version '2020.2'
-  id 'edu.wpi.first.NativeUtils' version '2020.7.2'
-  id 'edu.wpi.first.GradleVsCode' version '0.12.0'
+  id 'org.wpilib.WPILibRepositoriesPlugin' version '2027.0.0'
+  id 'org.wpilib.NativeUtils' version '2027.14.3'
+  id 'org.wpilib.GradleVsCode' version '2027.0.0'
 }
+
+// WPILib Version
+ext.wpilibVersion = "2027.0.0-alpha-7"
 
 repositories {
     mavenCentral()
@@ -20,16 +23,6 @@ tasks.withType(GenerateModuleMetadata) {
 
 apply from: 'config.gradle'
 
-task copyFirmwareHeaders(type: Copy) {
-    into("${projectDir}/include")
-    from("${projectDir}/../../../stm32/navx-mxp") {
-		include "**/AHRS*.h"
-		include "**/IMU*.h"
-	}
-}
-
-build.dependsOn(copyFirmwareHeaders)
-
 nativeUtils {
   exportsConfigs {
       navx_frc {
@@ -41,46 +34,18 @@ model {
   components {
     navx_frc(NativeLibrarySpec) {
       appendDebugPathToBinaries(binaries)
-      binaries.all {
-        if (it.targetPlatform.name == nativeUtils.wpi.platforms.roborio) {
-          it.sources {
-            athenaCpp(CppSourceSet) {
-              source {
-                srcDirs = ['src']
-                include '**/*.cpp'
-              }
-              exportedHeaders {
-                srcDirs 'include'
-              }
-            }
+      sources {
+        cpp {
+          source {
+            srcDirs 'src'
+            include '**/*.cpp'
           }
-        } else if (it.targetPlatform.name == nativeUtils.wpi.platforms.raspbian) {
-          it.sources {
-            raspberryCpp(CppSourceSet) {
-              source {
-                srcDirs = ['src']
-                include '**/*.cpp'
-              }
-              exportedHeaders {
-                srcDirs 'include'
-              }
-            }
-          }
-        } else {
-          it.sources {
-            desktopCpp(CppSourceSet) {
-              source {
-                srcDirs = ['src']
-                include '**/*.cpp'
-              }
-              exportedHeaders {
-                srcDirs 'include'
-              }
-            }
+          exportedHeaders {
+            srcDirs 'include', '../../protocol/cpp/include'
           }
         }
       }
-      nativeUtils.useRequiredLibrary(it, "wpilibc_shared", "ntcore_shared", "hal_shared", "wpiutil_shared")
+      nativeUtils.useRequiredLibrary(it, "wpilibc_shared", "ntcore_shared", "hal_shared", "wpiutil_shared", "wpimath_shared", "telemetry_shared", "catch2_static")
     }
   }
 }
@@ -88,5 +53,5 @@ model {
 apply from: 'publish.gradle'
 
 wrapper {
-  gradleVersion = '6.0'
+  gradleVersion = '9.4.1'
 }

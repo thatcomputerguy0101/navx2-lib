@@ -7,20 +7,23 @@
 
 #include "SerialIO.h"
 #include "delay.h"
-#include "frc/Timer.h"
+#include <wpi/telemetry/Telemetry.hpp>
+#include <wpi/units/frequency.hpp>
+#include <wpi/units/time.hpp>
+#include <wpi/system/Timer.hpp>
 
-static const double IO_TIMEOUT_SECONDS = 1.0;
+static const units::second_t IO_TIMEOUT_SECONDS = 1.0_s;
 
 #define SERIALIO_DASHBOARD_DEBUG
 
 SerialIO::SerialIO( SerialPort::Port port_id,
-                    uint8_t update_rate_hz,
+                    wpi::units::hertz_u8_t update_rate,
                     bool processed_data,
                     IIOCompleteNotification *notify_sink,
                     IBoardCapabilities *board_capabilities ) {
     this->serial_port_id = port_id;
-    is_usb = ((port_id != SerialPort::Port::kMXP) &&
-    		  (port_id != SerialPort::Port::kOnboard));
+    is_usb = ((port_id != SerialPort::Port::MXP) &&
+    		  (port_id != SerialPort::Port::ONBOARD));
     ypr_update_data = {};
     gyro_update_data = {};
     ahrs_update_data = {};
@@ -32,7 +35,7 @@ SerialIO::SerialIO( SerialPort::Port port_id,
     this->board_capabilities = board_capabilities;
     serial_port = 0;
     serial_port = GetMaybeCreateSerialPort();
-    this->update_rate_hz = update_rate_hz;
+    this->update_rate = update_rate;
     if ( processed_data ) {
         update_type = MSGID_AHRSPOS_TS_UPDATE;
     } else {
@@ -43,7 +46,7 @@ SerialIO::SerialIO( SerialPort::Port port_id,
     stop = true;
     byte_count = 0;
     update_count = 0;
-    last_valid_packet_time = 0;
+    last_valid_packet_time = 0_s;
     connect_reported =
         disconnect_reported = false;
     debug = false;
@@ -77,7 +80,7 @@ SerialPort *SerialIO::GetMaybeCreateSerialPort()
         	printf("Opening %s serial port to communicate with navX-MXP/Micro.\n", (is_usb ? "USB " : "TTL UART "));
             serial_port = new SerialPort(57600, serial_port_id);
             serial_port->SetReadBufferSize(256);
-            serial_port->SetTimeout(1.0);
+            serial_port->SetTimeout(1.0_s);
             serial_port->EnableTermination('\n');
             serial_port->Reset();
         } catch (std::exception& ex) {
@@ -112,7 +115,7 @@ void SerialIO::DispatchStreamResponse(IMUProtocol::StreamResponse& response) {
 
     board_state.accel_fsr_g = response.accel_fsr_g;
     board_state.gyro_fsr_dps = response.gyro_fsr_dps;
-    board_state.update_rate_hz = (uint8_t) response.update_rate_hz;
+    board_state.update_rate_hz = response.update_rate_hz;
     notify_sink->SetBoardState(board_state, true);
     /* If AHRSPOS_TS is update type is requested, but board doesn't support it, */
     /* retransmit the stream config, falling back to AHRSPos update mode, if    */
@@ -158,9 +161,9 @@ int SerialIO::DecodePacketHandler(char * received_data, int bytes_remaining) {
 void SerialIO::Run() {
     stop = false;
     bool stream_response_received = false;
-    double last_stream_command_sent_timestamp = 0.0;
-    double last_data_received_timestamp = 0;
-    double last_second_start_time = 0;
+    units::second_t last_stream_command_sent_timestamp = 0.0_s;
+    units::second_t last_data_received_timestamp = 0_s;
+    units::second_t last_second_start_time = 0_s;
 
     int partial_binary_packet_count = 0;
     int stream_response_receive_count = 0;
@@ -172,7 +175,7 @@ void SerialIO::Run() {
 
     try {
         serial_port->SetReadBufferSize(256);
-        serial_port->SetTimeout(1.0);
+        serial_port->SetTimeout(1.0_s);
         serial_port->EnableTermination('\n');
         serial_port->Flush();
         serial_port->Reset();
@@ -186,7 +189,7 @@ void SerialIO::Run() {
     AHRSProtocol::IntegrationControl integration_control = {};
     AHRSProtocol::IntegrationControl integration_control_response = {};
 
-    int cmd_packet_length = IMUProtocol::encodeStreamCommand( stream_command, update_type, update_rate_hz );
+    int cmd_packet_length = IMUProtocol::encodeStreamCommand( stream_command, update_type, update_rate.value() );
     try {
         serial_port->Reset();
         serial_port->Write( stream_command, cmd_packet_length );
@@ -195,9 +198,9 @@ void SerialIO::Run() {
         serial_port->Flush();
         port_reset_count++;
         #ifdef SERIALIO_DASHBOARD_DEBUG
-        SmartDashboard::PutNumber("navX Port Resets", (double)port_reset_count);
+        telemetry::Log("navX Port Resets", (double)port_reset_count);
         #endif
-        last_stream_command_sent_timestamp = Timer::GetFPGATimestamp();
+        last_stream_command_sent_timestamp = Timer::GetMonotonicTimestamp();
     } catch (std::exception& ex) {
         printf("SerialPort Run() Port Send Encode Stream Command Exception:  %s\n", ex.what());
     }
@@ -211,7 +214,7 @@ void SerialIO::Run() {
         try {
 
         	if( serial_port == NULL) {
-                delayMillis(1000/update_rate_hz);
+                delayMillis((1 / update_rate).convert<units::millisecond>().value());
                 if (debug) printf("Initiating reset of serial port, as serial_port reference is null.\n");
         		ResetSerialPort();
         		continue;
@@ -251,7 +254,7 @@ void SerialIO::Run() {
             }
 
             if ( !stop && ( remainder_bytes == 0 ) && ( serial_port->GetBytesReceived() < 1 ) ) {
-                delayMillis(1000/update_rate_hz);
+                delayMillis((1 / update_rate).convert<units::millisecond>().value());
             }
 
             int packets_received = 0;
@@ -269,7 +272,7 @@ void SerialIO::Run() {
             }
 
             if (bytes_read > 0) {
-                last_data_received_timestamp = Timer::GetFPGATimestamp();
+                last_data_received_timestamp = Timer::GetMonotonicTimestamp();
                 int i = 0;
                 // Scan the buffer looking for valid packets
                 while (i < bytes_read) {
@@ -283,7 +286,7 @@ void SerialIO::Run() {
                         i++;
                         discarded_bytes_count++;
                         #ifdef SERIALIO_DASHBOARD_DEBUG
-                            SmartDashboard::PutNumber("navX Discarded Bytes", (double)discarded_bytes_count);
+                            telemetry::Log("navX Discarded Bytes", (double)discarded_bytes_count);
                         #endif
                         continue;
                     } else {
@@ -311,7 +314,7 @@ void SerialIO::Run() {
                                     bytes_remaining--;
                                     partial_binary_packet_count++;
                                     #ifdef SERIALIO_DASHBOARD_DEBUG
-                                        SmartDashboard::PutNumber("navX Partial Binary Packets", (double)partial_binary_packet_count);
+                                        telemetry::Log("navX Partial Binary Packets", (double)partial_binary_packet_count);
                                     #endif
                                     continue;
                                 }
@@ -328,11 +331,11 @@ void SerialIO::Run() {
                             connect_reported = true;
                             disconnect_reported = false;
                         }
-                        last_valid_packet_time = Timer::GetFPGATimestamp();
+                        last_valid_packet_time = Timer::GetMonotonicTimestamp();
                         updates_in_last_second++;
-                        if ((last_valid_packet_time - last_second_start_time ) > 1.0 ) {
+                        if ((last_valid_packet_time - last_second_start_time ) > 1.0_s ) {
                             #ifdef SERIALIO_DASHBOARD_DEBUG
-                                SmartDashboard::PutNumber("navX Updates Per Sec", (double)updates_in_last_second);
+                                telemetry::Log("navX Updates Per Sec", (double)updates_in_last_second);
                             #endif
                             updates_in_last_second = 0;
                             last_second_start_time = last_valid_packet_time;
@@ -354,7 +357,7 @@ void SerialIO::Run() {
                             i += packet_length;
                             stream_response_receive_count++;
                             #ifdef SERIALIO_DASHBOARD_DEBUG
-                                SmartDashboard::PutNumber("navX Stream Responses", (double)stream_response_receive_count);
+                                telemetry::Log("navX Stream Responses", (double)stream_response_receive_count);
                             #endif
                         }
                         else {
@@ -364,7 +367,7 @@ void SerialIO::Run() {
                                 // Confirmation of integration control
                                 integration_response_receive_count++;
                                 #ifdef SERIALIO_DASHBOARD_DEBUG
-                                    SmartDashboard::PutNumber("navX Integration Control Response Count", integration_response_receive_count);
+                                    telemetry::Log("navX Integration Control Response Count", integration_response_receive_count);
                                 #endif
                                 i += packet_length;
                                 if ((integration_control.action & NAVX_INTEGRATION_CTL_RESET_YAW)!=0) {
@@ -411,7 +414,7 @@ void SerialIO::Run() {
                                                 i += pkt_len;
                                                 discarded_bytes_count += pkt_len;
                                                 #ifdef SERIALIO_DASHBOARD_DEBUG
-                                                    SmartDashboard::PutNumber("navX Discarded Bytes", (double)discarded_bytes_count);
+                                                    telemetry::Log("navX Discarded Bytes", (double)discarded_bytes_count);
                                                 #endif
                                             } else {
                                                 /* This is the initial portion of a partial binary packet. */
@@ -433,7 +436,7 @@ void SerialIO::Run() {
                                                         discarded_bytes_count++;
                                                     }
                                                     #ifdef SERIALIO_DASHBOARD_DEBUG
-                                                        SmartDashboard::PutNumber("navX Discarded Bytes", (double)discarded_bytes_count);
+                                                        telemetry::Log("navX Discarded Bytes", (double)discarded_bytes_count);
                                                     #endif
                                                     break;
                                                 }
@@ -491,7 +494,7 @@ void SerialIO::Run() {
                     serial_port->Reset();
                     port_reset_count++;
                     #ifdef SERIALIO_DASHBOARD_DEBUG
-                        SmartDashboard::PutNumber("navX Port Resets", (double)port_reset_count);
+                        telemetry::Log("navX Port Resets", (double)port_reset_count);
                     #endif
                 }
 
@@ -505,8 +508,8 @@ void SerialIO::Run() {
                 // of operation, (re)send a stream configuration request
 
                 if ( retransmit_stream_config ||
-                        (!stream_response_received && ((Timer::GetFPGATimestamp() - last_stream_command_sent_timestamp ) > 3.0 ) ) ) {
-                    cmd_packet_length = IMUProtocol::encodeStreamCommand( stream_command, update_type, update_rate_hz );
+                        (!stream_response_received && ((Timer::GetMonotonicTimestamp() - last_stream_command_sent_timestamp ) > 3.0_s ) ) ) {
+                    cmd_packet_length = IMUProtocol::encodeStreamCommand( stream_command, update_type, update_rate.value() );
                     try {
                         printf("Retransmitting stream configuration command to navX-MXP/Micro.\n");
                     	/* Ugly Hack.  This is a workaround for ARTF5478:           */
@@ -524,7 +527,7 @@ void SerialIO::Run() {
                         cmd_packet_length = AHRSProtocol::encodeDataGetRequest( stream_command,  AHRS_DATA_TYPE::BOARD_IDENTITY, AHRS_TUNING_VAR_ID::UNSPECIFIED );
                         serial_port->Write( stream_command, cmd_packet_length );
                         serial_port->Flush();
-                        last_stream_command_sent_timestamp = Timer::GetFPGATimestamp();
+                        last_stream_command_sent_timestamp = Timer::GetMonotonicTimestamp();
                     } catch (std::exception& ex2) {
                         printf("SerialPort Run() Re-transmit Encode Stream Command Exception:  %s\n", ex2.what());
                     }
@@ -532,7 +535,7 @@ void SerialIO::Run() {
                 else {
                     // If no bytes remain in the buffer, and not awaiting a response, sleep a bit
                     if ( stream_response_received && ( serial_port->GetBytesReceived() == 0 ) ) {
-                        delayMillis(1000/update_rate_hz);
+                        delayMillis((1 / update_rate).convert<units::millisecond>().value());
                     }
                 }
 
@@ -541,13 +544,13 @@ void SerialIO::Run() {
                 /* In this case , trigger transmission of a new stream_command, to ensure the    */
                 /* streaming packet type is configured correctly.                                */
 
-                if ( ( Timer::GetFPGATimestamp() - last_valid_packet_time ) > 1.0 ) {
-                    last_stream_command_sent_timestamp = 0.0;
+                if ( ( Timer::GetMonotonicTimestamp() - last_valid_packet_time ) > 1.0_s ) {
+                    last_stream_command_sent_timestamp = 0.0_s;
                     stream_response_received = false;
                 }
             } else {
                 /* No data received this time around */
-                if ( Timer::GetFPGATimestamp() - last_data_received_timestamp  > 1.0 ) {
+                if ( Timer::GetMonotonicTimestamp() - last_data_received_timestamp  > 1.0_s ) {
                     if (debug) printf("Initiating Serial Port Reset since no data was received in the last second.\n");
                     ResetSerialPort();
                 }
@@ -557,8 +560,8 @@ void SerialIO::Run() {
             stream_response_received = false;
             timeout_count++;
             #ifdef SERIALIO_DASHBOARD_DEBUG
-                SmartDashboard::PutNumber("navX Serial Port Timeout / Buffer Overrun", (double)timeout_count);
-                SmartDashboard::PutString("navX Last Exception", ex.what());
+                telemetry::Log("navX Serial Port Timeout / Buffer Overrun", (double)timeout_count);
+                telemetry::Log("navX Last Exception", ex.what());
             #endif
             if (debug) printf("Initiating Serial Port Reset due to exception during Run() loop.\n");
             ResetSerialPort();
@@ -567,7 +570,7 @@ void SerialIO::Run() {
 }
 
 bool SerialIO::IsConnected() {
-    double time_since_last_update = Timer::GetFPGATimestamp() - this->last_valid_packet_time;
+    units::second_t time_since_last_update = Timer::GetMonotonicTimestamp() - this->last_valid_packet_time;
     return time_since_last_update <= IO_TIMEOUT_SECONDS;
 }
 
@@ -579,8 +582,8 @@ double SerialIO::GetUpdateCount() {
     return update_count;
 }
 
-void SerialIO::SetUpdateRateHz(uint8_t update_rate) {
-    update_rate_hz = update_rate;
+void SerialIO::SetUpdateRate(wpi::units::hertz_u8_t update_rate) {
+    this->update_rate = update_rate;
 }
 
 void SerialIO::ZeroYaw() {

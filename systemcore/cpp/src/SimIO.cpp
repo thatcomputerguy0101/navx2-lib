@@ -8,16 +8,18 @@
 #include "SimIO.h"
 #include "IMURegisters.h"
 #include "delay.h"
+#include "wpi/hal/SimDevice.hpp"
+#include "wpi/units/time.hpp"
 
-using namespace frc;
+using namespace wpi;
 
-SimIO::SimIO( uint8_t update_rate_hz,
+SimIO::SimIO( wpi::units::hertz_u8_t update_rate,
                 IIOCompleteNotification *notify_sink,
                 hal::SimDevice *sim_device) {
-    this->update_rate_hz        = update_rate_hz;
+    this->update_rate        = update_rate;
     this->notify_sink           = notify_sink;
     this->stop                  = false;
-    this->start_seconds         = 0.0;
+    this->start_seconds         = 0.0_s;
     this->is_connected          = false;
     this->sim_device            = sim_device;
 
@@ -30,18 +32,18 @@ SimIO::SimIO( uint8_t update_rate_hz,
             
         // Booleans
         
-        this->simConnected  = sim_device->CreateBoolean("Connected", false, true);
+        this->simConnected  = sim_device->CreateBoolean("Connected", hal::SimDevice::Direction::INPUT, true);
 
         // Doubles
-        this->simYaw                = sim_device->CreateDouble("Yaw", false, 0.0f);
-        this->simPitch              = sim_device->CreateDouble("Pitch", false, 0.0f);
-        this->simRoll               = sim_device->CreateDouble("Roll", false, 0.0f);
-        this->simCompassHeading     = sim_device->CreateDouble("CompassHeading", false, 0.0f);
-        this->simFusedHeading       = sim_device->CreateDouble("FusedHeading", false, 0.0f);                        
+        this->simYaw                = sim_device->CreateDouble("Yaw", hal::SimDevice::Direction::INPUT, 0.0f);
+        this->simPitch              = sim_device->CreateDouble("Pitch", hal::SimDevice::Direction::INPUT, 0.0f);
+        this->simRoll               = sim_device->CreateDouble("Roll", hal::SimDevice::Direction::INPUT, 0.0f);
+        this->simCompassHeading     = sim_device->CreateDouble("CompassHeading", hal::SimDevice::Direction::INPUT, 0.0f);
+        this->simFusedHeading       = sim_device->CreateDouble("FusedHeading", hal::SimDevice::Direction::INPUT, 0.0f);                        
 
-        this->simLinearWorldAccelX  = sim_device->CreateDouble("LinearWorldAccelX", false, 0.0f);
-        this->simLinearWorldAccelY  = sim_device->CreateDouble("LinearWorldAccelY", false, 0.0f);
-        this->simLinearWorldAccelZ  = sim_device->CreateDouble("LinearWorldAccelZ", false, 0.0f);
+        this->simLinearWorldAccelX  = sim_device->CreateDouble("LinearWorldAccelX", hal::SimDevice::Direction::INPUT, 0.0f);
+        this->simLinearWorldAccelY  = sim_device->CreateDouble("LinearWorldAccelY", hal::SimDevice::Direction::INPUT, 0.0f);
+        this->simLinearWorldAccelZ  = sim_device->CreateDouble("LinearWorldAccelZ", hal::SimDevice::Direction::INPUT, 0.0f);
 
         board_id.fw_ver_major = 3;
         board_id.fw_ver_minor = 1;
@@ -76,7 +78,7 @@ SimIO::SimIO( uint8_t update_rate_hz,
                 OMNIMOUNT_DEFAULT;        
         board_state.accel_fsr_g = 2;
         board_state.gyro_fsr_dps = 2000;                
-        board_state.update_rate_hz = this->update_rate_hz;    
+        board_state.update_rate_hz = this->update_rate.value();    
 
         /////////////////////////        
         // AHRSUpdate initialization
@@ -151,18 +153,18 @@ bool SimIO::IsConnected() {
 }
 
 double SimIO::GetByteCount() {
-    #define SIM_BYTES_PER_SECOND 1000
-    double num_secs_running = Timer::GetFPGATimestamp() - start_seconds;
+    #define SIM_BYTES_PER_SECOND 1000 / 1_s;
+    units::second_t num_secs_running = Timer::GetMonotonicTimestamp() - start_seconds;
     return num_secs_running * SIM_BYTES_PER_SECOND;
 }
 
 double SimIO::GetUpdateCount() {
-    double num_secs_running = Timer::GetFPGATimestamp() - start_seconds;
-    return num_secs_running / update_rate_hz;
+    units::second_t num_secs_running = Timer::GetMonotonicTimestamp() - start_seconds;
+    return num_secs_running * update_rate;
 }
 
-void SimIO::SetUpdateRateHz(uint8_t update_rate) {
-    this->update_rate_hz = update_rate;
+void SimIO::SetUpdateRate(wpi::units::hertz_u8_t update_rate) {
+    this->update_rate = update_rate;
 }
 
 void SimIO::ZeroYaw() {
@@ -190,7 +192,7 @@ void SimIO::Run() {
     // Update AHRS data (portions of which are static; others are updated from sim variables)
     notify_sink->SetAHRSPosData(ahrs_update, sensor_timestamp);        
 
-    start_seconds = Timer::GetFPGATimestamp();
+    start_seconds = Timer::GetMonotonicTimestamp();
 
     while (!stop) {
         delayMillis(20);

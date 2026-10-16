@@ -114,6 +114,7 @@ THE SOFTWARE.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <format>
 
 #define IMU_PROTOCOL_MAX_MESSAGE_LENGTH QUATERNION_UPDATE_MESSAGE_LENGTH
 
@@ -254,7 +255,7 @@ public:
         // Data
         protocol_buffer[STREAM_CMD_STREAM_TYPE_INDEX] = stream_type;
         // convert update_rate_hz to two ascii bytes
-        sprintf(&protocol_buffer[STREAM_CMD_UPDATE_RATE_HZ_INDEX], "%02X", update_rate_hz);
+        std::format_to_n(&protocol_buffer[STREAM_CMD_UPDATE_RATE_HZ_INDEX], 2, "{:02X}", update_rate_hz);
 
         // Footer
         encodeTermination( protocol_buffer, STREAM_CMD_MESSAGE_LENGTH, STREAM_CMD_MESSAGE_LENGTH - 4 );
@@ -400,10 +401,8 @@ protected:
             {
                 checksum += buffer[i];
             }
-            // convert checksum to two ascii bytes
-            sprintf(&buffer[content_length], "%02X", checksum);
-            // Message Terminator
-            sprintf(&buffer[content_length + CHECKSUM_LENGTH], "%s","\r\n");
+            // convert checksum to two ascii bytes, with message terminator
+            std::format_to_n(&buffer[content_length], 4, "{:02X}\r\n", checksum);
         }
     }
 
@@ -419,19 +418,12 @@ protected:
 
     static void encodeProtocolFloat( float f, char* buff )
     {
-        char work_buffer[PROTOCOL_FLOAT_LENGTH + 1];
-        int i;
-        int temp1 = abs((int)((f - (int)f) * 100));
-        if ( f < 0 ) buff[0] = '-'; else buff[0] = ' ';
-        sprintf(work_buffer,"%03d.%02d", abs((int)f), temp1);
-        for ( i = 0; i < (PROTOCOL_FLOAT_LENGTH-1); i++ ) {
-            buff[1 + i] = work_buffer[i];
-        }
+        std::format_to_n(buff, PROTOCOL_FLOAT_LENGTH, "{: 05.2f}", f);
     }
 
     static void encodeProtocolUint16( uint16_t value, char* buff )
     {
-        sprintf(&buff[0],"%04X", value );
+        std::format_to_n(buff, 4, "{:04X}", value);
     }
 
     static uint16_t decodeProtocolUint16( char *uint16_string )
@@ -484,10 +476,7 @@ protected:
     static float decodeProtocolFloat( char *buffer )
     {
         char temp[PROTOCOL_FLOAT_LENGTH+1];
-        for ( int i = 0; i < PROTOCOL_FLOAT_LENGTH; i++ )
-        {
-            temp[i] = buffer[i];
-        }
+        strncpy(temp, buffer, PROTOCOL_FLOAT_LENGTH);
         temp[PROTOCOL_FLOAT_LENGTH] = 0;
         return atof(temp);
     }

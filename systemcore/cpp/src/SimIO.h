@@ -14,29 +14,30 @@
 #include "AHRSProtocol.h"
 #include "IBoardCapabilities.h"
 #include "IIOCompleteNotification.h"
-#include "frc/Timer.h"
+#include <wpi/units/time.hpp>
+#include <wpi/system/Timer.hpp>
 
-#include <hal/SimDevice.h>
+#include <wpi/hal/SimDevice.hpp>
 
 class SimIO : public IIOProvider {
 private:
     bool stop;
     bool is_connected;
-    double start_seconds;  
+    wpi::units::second_t start_seconds;  
     IIOCompleteNotification *notify_sink;         
-    uint8_t update_rate_hz; 
+    wpi::units::hertz_u8_t update_rate; 
 
-    hal::SimDevice *sim_device;
-    hal::SimBoolean simConnected;
-    hal::SimDouble simRate;
-    hal::SimDouble simYaw;
-    hal::SimDouble simPitch;
-    hal::SimDouble simRoll;
-    hal::SimDouble simCompassHeading;
-    hal::SimDouble simFusedHeading;    
-    hal::SimDouble simLinearWorldAccelX;
-    hal::SimDouble simLinearWorldAccelY;
-    hal::SimDouble simLinearWorldAccelZ;
+    wpi::hal::SimDevice *sim_device;
+    wpi::hal::SimBoolean simConnected;
+    wpi::hal::SimDouble simRate;
+    wpi::hal::SimDouble simYaw;
+    wpi::hal::SimDouble simPitch;
+    wpi::hal::SimDouble simRoll;
+    wpi::hal::SimDouble simCompassHeading;
+    wpi::hal::SimDouble simFusedHeading;    
+    wpi::hal::SimDouble simLinearWorldAccelX;
+    wpi::hal::SimDouble simLinearWorldAccelY;
+    wpi::hal::SimDouble simLinearWorldAccelZ;
 
     float last_yaw;
     float last_linear_world_accel_x;
@@ -48,13 +49,13 @@ private:
     IMUProtocol::GyroUpdate raw_data_update;
 
 public:
-    SimIO( uint8_t update_rate_hz,
+    SimIO( wpi::units::hertz_u8_t update_rate,
                 IIOCompleteNotification *notify_sink,
-                hal::SimDevice *sim_device);
+                wpi::hal::SimDevice *sim_device);
     bool   IsConnected();
     double GetByteCount();
     double GetUpdateCount();
-    void   SetUpdateRateHz(uint8_t update_rate);
+    void   SetUpdateRate(wpi::units::hertz_u8_t update_rate);
     void   ZeroYaw();
     void   ZeroDisplacement();
     void   Run();

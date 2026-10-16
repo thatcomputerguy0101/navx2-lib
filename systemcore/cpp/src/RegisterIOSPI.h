@@ -5,13 +5,14 @@
  *      Author: Scott
  */
 
+#ifdef SPI
 #ifndef SRC_REGISTERIOSPI_H_
 #define SRC_REGISTERIOSPI_H_
 
 #include "RegisterIO.h"
-#include "frc/SPI.h"
+#include <wpi/hardware/bus/SPI.hpp>
 
-using namespace frc;
+using namespace wpi;
 
 static const int MAX_SPI_MSG_LENGTH = 256;
 
@@ -33,3 +34,4 @@ private:
 };
 
 #endif /* SRC_REGISTERIOSPI_H_ */
+#endif
