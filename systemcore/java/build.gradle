@@ -10,9 +10,6 @@ plugins {
     id 'org.wpilib.WPILibRepositoriesPlugin' version '2027.0.0'
 }
 
-// WPILib Version
-ext.wpilibVersion = "2027.0.0-alpha-7"
-
 repositories {
     mavenCentral()
 }
@@ -48,9 +45,6 @@ sourceSets {
 }
 
 //build.dependsOn generateJavadocs
+build.dependsOn rootProject.generateVendorJson
 
 apply from: 'publish.gradle'
-
-wrapper {
-  gradleVersion = '9.4.1'
-}

@@ -4,9 +4,6 @@ apply plugin: 'signing'
 
 ext.licenseFile = files("$rootDir/LICENSE.txt")
 
-// Retrieve version number from core navx2 build version.txt file
-def pubVersion = rootProject.file("../version.txt").text.trim()
-
 def outputsFolder = file("$buildDir/allOutputs")
 
 def versionFile = file("$outputsFolder/version.txt")
@@ -137,9 +134,6 @@ signing {
 model {
     tasks.generatePomFileForCppPublication {
         destination = file("$buildDir/generated-pom.xml")
-    }
-    tasks.publishCppPublicationToMavenLocal {
-        dependsOn project.tasks.signArchives
     }
     tasks.publishCppPublicationToMavenRepository {
         dependsOn project.tasks.signArchives

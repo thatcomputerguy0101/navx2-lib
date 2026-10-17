@@ -4,9 +4,6 @@ apply plugin: 'signing'
 
 ext.licenseFile = files("$rootDir/LICENSE.txt")
 
-// Retrieve version number from core navx2 build version.txt file
-def pubVersion = rootProject.file("../version.txt").text.trim()
-
 def outputsFolder = file("$buildDir/libs")
 
 def versionFile = file("$outputsFolder/version.txt")
@@ -114,7 +111,7 @@ artifacts {
 }
 
 signing {
-    sign publishing.publications
+    sign configurations.archives
 }
 
 model {
@@ -122,16 +119,12 @@ model {
     tasks.generatePomFileForMavenJavaPublication {
         destination = file("$buildDir/generated-pom.xml")
     }
-    tasks.publishMavenJavaPublicationToMavenLocal {
-        dependsOn project.tasks.signArchives
-    }
     tasks.publishMavenJavaPublicationToMavenRepository {
         dependsOn project.tasks.signArchives
     }
     publishing {
         repositories {
             maven {
-                url "${projectDir}/../../../publish/maven"
 				url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
 				credentials {
 					username System.getenv("sonatypeUsername")

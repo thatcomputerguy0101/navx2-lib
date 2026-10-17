@@ -5,9 +5,6 @@ plugins {
   id 'org.wpilib.GradleVsCode' version '2027.0.0'
 }
 
-// WPILib Version
-ext.wpilibVersion = "2027.0.0-alpha-7"
-
 repositories {
     mavenCentral()
 }
@@ -50,8 +47,6 @@ model {
   }
 }
 
-apply from: 'publish.gradle'
+build.dependsOn rootProject.generateVendorJson
 
-wrapper {
-  gradleVersion = '9.4.1'
-}
+apply from: 'publish.gradle'

@@ -3,10 +3,11 @@
     "name": "KauaiLabs_navX_FRC",
     "version": "0.0.000",
     "uuid": "cb311d09-36e9-4143-a032-55bb2b94443b",
+    "wpilibYear": "0000",
     "mavenUrls": [
         "https://repo1.maven.org/maven2/"
     ],
-    "jsonUrl": "https://www.kauailabs.com/dist/frc/2020/navx_frc.json",
+    "jsonUrl": "https://www.kauailabs.com/dist/frc/0000/navx_frc.json",
     "javaDependencies": [
         {
             "groupId": "com.kauailabs.navx.frc",
@@ -26,9 +27,11 @@
             "libName": "navx_frc",
             "skipInvalidPlatforms": true,
             "binaryPlatforms": [
-                "linuxathena",
-		"linuxraspbian",
-                "windowsx86-64"
+                "windowsx86-64",
+                "linuxsystemcore",
+                "linuxarm64",
+                "linuxx86-64",
+                "osxuniversal"
             ]
         }
     ]

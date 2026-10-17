@@ -1,0 +1,45 @@
+ext.localMavenURL = file("$project.buildDir/outputs/maven")
+ext.allOutputsFolder = file("$project.buildDir/outputs")
+
+ext {
+    wpilibVersion = "2027.0.0-alpha-7"
+    wpilibYear = "2027_alpha7"
+
+    pubVersion = rootProject.file("version.txt").text.trim()
+}
+
+def navx_frcFileInput = file("navx_frc.template.json")
+ext.navx_frcFileOutput = file("$buildDir/generated/vendordeps/navx_frc.json")
+
+task generateVendorJson() {
+    description = "Generates the vendor JSON file"
+    group = "NavX_FRC"
+
+    outputs.file navx_frcFileOutput
+    inputs.file navx_frcFileInput
+
+    println "Writing vendor JSON ${pubVersion} to $navx_frcFileOutput"
+
+    if (navx_frcFileOutput.exists()) {
+        navx_frcFileOutput.delete()
+    }
+    navx_frcFileOutput.parentFile.mkdirs()
+
+    def read = navx_frcFileInput.text
+            .replace('0.0.000', pubVersion)
+            .replace('0000', wpilibYear)
+    navx_frcFileOutput.text = read
+
+    outputs.upToDateWhen { false }
+}
+
+task publishVendorJsonToLocalOutputs(type: Copy) {
+    from navx_frcFileOutput
+    into "$allOutputsFolder/vendordeps/"
+
+    // publish.dependsOn it
+}
+
+wrapper {
+  gradleVersion = '9.4.1'
+}

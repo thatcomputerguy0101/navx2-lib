@@ -4,3 +4,8 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+rootProject.name = 'navx_frc'
+
+include 'cpp'
+include 'java'
