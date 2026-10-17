@@ -8,7 +8,7 @@
 #ifndef SRC_REGISTERIOI2C_H_
 #define SRC_REGISTERIOI2C_H_
 
-#include "RegisterIO.h"
+#include "IRegisterIO.h"
 #include <wpi/hardware/bus/I2C.hpp>
 
 using namespace wpi;

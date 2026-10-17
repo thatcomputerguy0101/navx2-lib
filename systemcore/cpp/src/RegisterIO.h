@@ -8,7 +8,6 @@
 #ifndef SRC_REGISTERIO_H_
 #define SRC_REGISTERIO_H_
 
-#include <stdint.h>
 #include "IIOProvider.h"
 #include "IRegisterIO.h"
 #include "IMUProtocol.h"

@@ -9,7 +9,7 @@
 #ifndef SRC_REGISTERIOSPI_H_
 #define SRC_REGISTERIOSPI_H_
 
-#include "RegisterIO.h"
+#include "IRegisterIO.h"
 #include <wpi/hardware/bus/SPI.hpp>
 
 using namespace wpi;

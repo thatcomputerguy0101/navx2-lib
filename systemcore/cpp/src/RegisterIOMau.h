@@ -10,7 +10,6 @@
 
 #include <stdint.h>
 #include "IIOProvider.h"
-#include "IRegisterIO.h"
 #include "IMUProtocol.h"
 #include "AHRSProtocol.h"
 #include "IBoardCapabilities.h"

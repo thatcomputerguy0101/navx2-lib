@@ -8,11 +8,9 @@
 #ifndef SRC_SIMIO_H_
 #define SRC_SIMIO_H_
 
-#include <stdint.h>
 #include "IIOProvider.h"
 #include "IMUProtocol.h"
 #include "AHRSProtocol.h"
-#include "IBoardCapabilities.h"
 #include "IIOCompleteNotification.h"
 #include <wpi/units/time.hpp>
 #include <wpi/system/Timer.hpp>

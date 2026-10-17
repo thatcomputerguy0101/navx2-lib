@@ -8,7 +8,6 @@
 #include <sstream>
 #include <fstream>
 #include <string>
-#include <iomanip>
 #include <AHRS.h>
 #include <AHRSProtocol.h>
 #include "IIOProvider.h"
@@ -17,6 +16,7 @@
 #include "InertialDataIntegrator.h"
 #include "OffsetTracker.h"
 #include "ContinuousAngleTracker.h"
+#include "RegisterIO.h"
 #include "RegisterIOSPI.h"
 #include "RegisterIOI2C.h"
 #include "RegisterIOMau.h"
