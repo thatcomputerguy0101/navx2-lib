@@ -12,9 +12,9 @@ package com.kauailabs.navx.frc;
 import com.kauailabs.navx.AHRSProtocol;
 import com.kauailabs.navx.IMUProtocol;
 
-import edu.wpi.first.wpilibj.SerialPort;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import org.wpilib.hardware.bus.SerialPort;
+import org.wpilib.system.Timer;
+import org.wpilib.telemetry.Telemetry;;
 
 class SerialIO implements IIOProvider {
 
@@ -46,9 +46,9 @@ class SerialIO implements IIOProvider {
     
     public SerialIO( SerialPort.Port port_id, byte update_rate_hz, boolean processed_data, IIOCompleteNotification notify_sink, IBoardCapabilities board_capabilities ) {
         this.serial_port_id = port_id;
-        is_usb = ((port_id == SerialPort.Port.kUSB) ||
-        		  (port_id == SerialPort.Port.kUSB1)||
-        		  (port_id == SerialPort.Port.kUSB2));
+        is_usb = ((port_id == SerialPort.Port.USB) ||
+        		  (port_id == SerialPort.Port.USB_1)||
+        		  (port_id == SerialPort.Port.USB_2));
         ypr_update_data = new IMUProtocol.YPRUpdate();
         gyro_update_data = new IMUProtocol.GyroUpdate();
         ahrs_update_data = new AHRSProtocol.AHRSUpdate();
@@ -209,11 +209,11 @@ class SerialIO implements IIOProvider {
 	            serial_port.flush();
 	            port_reset_count++;
 	            if ( debug ) {
-	                SmartDashboard.putNumber("navX Port Resets", (double)port_reset_count);
+	                Telemetry.log("navX Port Resets", (double)port_reset_count);
 	            }
-	            last_stream_command_sent_timestamp = Timer.getFPGATimestamp();
+	            last_stream_command_sent_timestamp = Timer.getMonotonicTimestamp();
 	            boardid_request_sent = true;
-                last_valid_packet_time = Timer.getFPGATimestamp();
+                last_valid_packet_time = Timer.getMonotonicTimestamp();
 	            System.out.println("navX-MXP/Micro Connected " + (is_usb ? "via USB." : "via TTL UART."));
 	        } catch (RuntimeException ex) {
 	            //ex.printStackTrace();
@@ -292,7 +292,7 @@ class SerialIO implements IIOProvider {
                 }
 
                 if (bytes_read > 0) {
-                    last_data_received_timestamp = Timer.getFPGATimestamp();
+                    last_data_received_timestamp = Timer.getMonotonicTimestamp();
                     int i = 0;
                     // Scan the buffer looking for valid packets
                     while (i < bytes_read) {
@@ -306,7 +306,7 @@ class SerialIO implements IIOProvider {
                             i++;
                             discarded_bytes_count++;
                             if ( debug ) {
-                                SmartDashboard.putNumber("navX Discarded Bytes", (double)discarded_bytes_count);
+                                Telemetry.log("navX Discarded Bytes", (double)discarded_bytes_count);
                             }
                             continue;
                         } else {
@@ -336,7 +336,7 @@ class SerialIO implements IIOProvider {
                                         bytes_remaining--;
                                         partial_binary_packet_count++;
                                         if ( debug ) {
-                                            SmartDashboard.putNumber("navX Partial Binary Packets", (double)partial_binary_packet_count);
+                                            Telemetry.log("navX Partial Binary Packets", (double)partial_binary_packet_count);
                                         }
                                         continue;
                                     }
@@ -353,11 +353,11 @@ class SerialIO implements IIOProvider {
                                 connect_reported = true;
                                 disconnect_reported = false;
                             }                            
-                            last_valid_packet_time = Timer.getFPGATimestamp();
+                            last_valid_packet_time = Timer.getMonotonicTimestamp();
                             updates_in_last_second++;
                             if ((last_valid_packet_time - last_second_start_time ) > 1.0 ) {
                                 if ( debug ) {
-                                    SmartDashboard.putNumber("navX Updates Per Sec", (double)updates_in_last_second);
+                                    Telemetry.log("navX Updates Per Sec", (double)updates_in_last_second);
                                 }
                                 updates_in_last_second = 0;
                                 last_second_start_time = last_valid_packet_time;
@@ -380,7 +380,7 @@ class SerialIO implements IIOProvider {
                                 i += packet_length;
                                 stream_response_receive_count++;
                                 if ( debug ) {
-                                    SmartDashboard.putNumber("navX Stream Responses", (double)stream_response_receive_count);                                
+                                    Telemetry.log("navX Stream Responses", (double)stream_response_receive_count);                                
                                 }
                             }
                             else {
@@ -390,7 +390,7 @@ class SerialIO implements IIOProvider {
                                     // Confirmation of integration control
                                     integration_response_receive_count++;
                                     if ( debug ) {
-                                        SmartDashboard.putNumber("navX Integration Control Response Count", integration_response_receive_count);
+                                        Telemetry.log("navX Integration Control Response Count", integration_response_receive_count);
                                     }
                                     i += packet_length;
                                     if ((integration_control.action & AHRSProtocol.NAVX_INTEGRATION_CTL_RESET_YAW)!=0) {
@@ -437,7 +437,7 @@ class SerialIO implements IIOProvider {
                                                     i += pkt_len;
                                                     discarded_bytes_count += pkt_len;
                                                     if ( debug ) {
-                                                        SmartDashboard.putNumber("navX Discarded Bytes", (double)discarded_bytes_count);
+                                                        Telemetry.log("navX Discarded Bytes", (double)discarded_bytes_count);
                                                     }
                                                 } else {
                                                     /* This is the initial portion of a partial binary packet. */
@@ -459,7 +459,7 @@ class SerialIO implements IIOProvider {
                                                             discarded_bytes_count++;
                                                         }
                                                         if ( debug ) {
-                                                            SmartDashboard.putNumber("navX Discarded Bytes", (double)discarded_bytes_count);
+                                                            Telemetry.log("navX Discarded Bytes", (double)discarded_bytes_count);
                                                         }
                                                         break;
                                                     }
@@ -513,7 +513,7 @@ class SerialIO implements IIOProvider {
                         serial_port.reset();
                         port_reset_count++;                        
                         if ( debug ) {
-                            SmartDashboard.putNumber("navX Port Resets", (double)port_reset_count);
+                            Telemetry.log("navX Port Resets", (double)port_reset_count);
                         }
                     }
 
@@ -526,7 +526,7 @@ class SerialIO implements IIOProvider {
                     // If a stream configuration response has not been received within three seconds
                     // of operation, (re)send a stream configuration request
                     if ( retransmit_stream_config ||
-                            (!stream_response_received && ((Timer.getFPGATimestamp() - last_stream_command_sent_timestamp ) > 3.0 ) ) ) {
+                            (!stream_response_received && ((Timer.getMonotonicTimestamp() - last_stream_command_sent_timestamp ) > 3.0 ) ) ) {
                         cmd_packet_length = IMUProtocol.encodeStreamCommand( stream_command, update_type, update_rate_hz ); 
                         try {
                             System.out.println("Retransmitting stream configuration command to navX-MXP/Micro.");
@@ -546,7 +546,7 @@ class SerialIO implements IIOProvider {
                             cmd_packet_length = AHRSProtocol.encodeDataGetRequest( stream_command,  AHRSProtocol.AHRS_DATA_TYPE.BOARD_IDENTITY, (byte)0 ); 
                             serial_port.write( stream_command, cmd_packet_length );
                             serial_port.flush();
-                            last_stream_command_sent_timestamp = Timer.getFPGATimestamp();                             
+                            last_stream_command_sent_timestamp = Timer.getMonotonicTimestamp();                             
                         } catch (RuntimeException ex2) {
                             ex2.printStackTrace();
                         }                                                    
@@ -564,13 +564,13 @@ class SerialIO implements IIOProvider {
                     /* In this case , trigger transmission of a new stream_command, to ensure the    */
                     /* streaming packet type is configured correctly.                                */
 
-                    if ( ( Timer.getFPGATimestamp() - last_valid_packet_time ) > 1.0 ) {
+                    if ( ( Timer.getMonotonicTimestamp() - last_valid_packet_time ) > 1.0 ) {
                         last_stream_command_sent_timestamp = 0.0;
                         stream_response_received = false;
                     }
                 } else {
                     /* No data received this time around */
-                    if ( Timer.getFPGATimestamp() - last_data_received_timestamp  > 1.0 ) {
+                    if ( Timer.getMonotonicTimestamp() - last_data_received_timestamp  > 1.0 ) {
                         if (debug) System.out.println("Initiating Serial Port Reset since no data was received in the last second.");
                         resetSerialPort();
                     }                   
@@ -580,8 +580,8 @@ class SerialIO implements IIOProvider {
                 stream_response_received = false;
                 timeout_count++;
                 if ( debug ) {
-                    SmartDashboard.putNumber("navX Serial Port Timeout / Buffer Overrun", (double)timeout_count);
-                    SmartDashboard.putString("navX Last Exception", ex.getMessage() + "; " + ex.toString());
+                    Telemetry.log("navX Serial Port Timeout / Buffer Overrun", (double)timeout_count);
+                    Telemetry.log("navX Last Exception", ex.getMessage() + "; " + ex.toString());
                 }
                 ex.printStackTrace();
                 if (debug) System.out.println("Initiating Serial Port Reset due to exception during Run() loop.");                
@@ -608,7 +608,7 @@ class SerialIO implements IIOProvider {
      * @return Returns true if a valid update has been received within the last second.
      */
     public boolean isConnected() {
-        double time_since_last_update = Timer.getFPGATimestamp() - this.last_valid_packet_time;
+        double time_since_last_update = Timer.getMonotonicTimestamp() - this.last_valid_packet_time;
         return time_since_last_update <= 1.0;
     }
 

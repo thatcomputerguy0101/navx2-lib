@@ -9,15 +9,15 @@
 /*----------------------------------------------------------------------------*/
 package com.kauailabs.navx.frc;
 
-import edu.wpi.first.wpilibj.Timer;
+import org.wpilib.system.Timer;
 import com.kauailabs.navx.AHRSProtocol;
 import com.kauailabs.navx.AHRSProtocol.AHRSPosUpdate;
 import com.kauailabs.navx.IMUProtocol.GyroUpdate;
 import com.kauailabs.navx.IMUProtocol;
 
-import edu.wpi.first.hal.SimBoolean;
-import edu.wpi.first.hal.SimDevice;
-import edu.wpi.first.hal.SimDouble;
+import org.wpilib.hardware.hal.SimBoolean;
+import org.wpilib.hardware.hal.SimDevice;
+import org.wpilib.hardware.hal.SimDouble;
 
 class SimIO implements IIOProvider {  
     
@@ -56,21 +56,21 @@ class SimIO implements IIOProvider {
             
             // Booleans
 
-            simConnected            = sim_device.createBoolean("Connected", false, true); 
+            simConnected            = sim_device.createBoolean("Connected", SimDevice.Direction.INPUT, true); 
             
             // Doubles
             
-            simRate                 = sim_device.createDouble("Rate", false, 0.0f);
-            simYaw                  = sim_device.createDouble("Yaw", false, 0.0f);
-            simPitch                = sim_device.createDouble("Pitch", false, 0.0f);
-            simRoll                 = sim_device.createDouble("Roll", false, 0.0f);     
+            simRate                 = sim_device.createDouble("Rate", SimDevice.Direction.INPUT, 0.0f);
+            simYaw                  = sim_device.createDouble("Yaw", SimDevice.Direction.INPUT, 0.0f);
+            simPitch                = sim_device.createDouble("Pitch", SimDevice.Direction.INPUT, 0.0f);
+            simRoll                 = sim_device.createDouble("Roll", SimDevice.Direction.INPUT, 0.0f);     
             
-            simCompassHeading       = sim_device.createDouble("CompassHeading", false, 0.0f);
-            simFusedHeading         = sim_device.createDouble("FusedHeading", false, 0.0f);     
+            simCompassHeading       = sim_device.createDouble("CompassHeading", SimDevice.Direction.INPUT, 0.0f);
+            simFusedHeading         = sim_device.createDouble("FusedHeading", SimDevice.Direction.INPUT, 0.0f);     
 
-            simLinearWorldAccelX    = sim_device.createDouble("LinearWorldAccelX", false, 0.0f);                                
-            simLinearWorldAccelY    = sim_device.createDouble("LinearWorldAccelY", false, 0.0f); 
-            simLinearWorldAccelZ    = sim_device.createDouble("LinearWorldAccelZ", false, 0.0f);   
+            simLinearWorldAccelX    = sim_device.createDouble("LinearWorldAccelX", SimDevice.Direction.INPUT, 0.0f);                                
+            simLinearWorldAccelY    = sim_device.createDouble("LinearWorldAccelY", SimDevice.Direction.INPUT, 0.0f); 
+            simLinearWorldAccelZ    = sim_device.createDouble("LinearWorldAccelZ", SimDevice.Direction.INPUT, 0.0f);   
             
             System.out.println("navX-Sensor SimDevice created.");            
         }      
@@ -209,10 +209,10 @@ class SimIO implements IIOProvider {
         // Update AHRS data (portions of which are static; others are updated from sim variables)
         notify_sink.setAHRSPosData(ahrs_update, sensor_timestamp);        
 
-        start_seconds = Timer.getFPGATimestamp();
+        start_seconds = Timer.getMonotonicTimestamp();
 
         while (!stop) {
-            Timer.delay(0.02f);
+            Timer.delay(0.02);
             sensor_timestamp += 20;
             UpdatePeriodicFromSimVariables(sensor_timestamp);            
         }
@@ -291,13 +291,13 @@ class SimIO implements IIOProvider {
 
     @Override
     public double getByteCount() {
-        double num_secs_running = Timer.getFPGATimestamp() - start_seconds;
+        double num_secs_running = Timer.getMonotonicTimestamp() - start_seconds;
         return num_secs_running * sim_bytes_per_second;
     }
 
     @Override
     public double getUpdateCount() {
-        double num_secs_running = Timer.getFPGATimestamp() - start_seconds;
+        double num_secs_running = Timer.getMonotonicTimestamp() - start_seconds;
         return num_secs_running / update_rate_hz;
     }
 

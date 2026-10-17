@@ -15,21 +15,21 @@ import com.kauailabs.navx.AHRSProtocol.AHRSPosUpdate;
 import com.kauailabs.navx.AHRSProtocol.BoardID;
 import com.kauailabs.navx.IMUProtocol.YPRUpdate;
 
-import edu.wpi.first.wpilibj.I2C;
-import edu.wpi.first.wpilibj.PIDSource;
-import edu.wpi.first.wpilibj.PIDSourceType;
-import edu.wpi.first.wpilibj.SPI;
-import edu.wpi.first.wpilibj.SerialPort;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.interfaces.Gyro;
-import edu.wpi.first.wpilibj.SendableBase;
-import edu.wpi.first.wpilibj.Sendable;
-import edu.wpi.first.wpilibj.smartdashboard.SendableBuilder;
-import edu.wpi.first.hal.FRCNetComm.tResourceType;
-import edu.wpi.first.hal.HAL;
-import edu.wpi.first.wpiutil.RuntimeDetector;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
-import edu.wpi.first.hal.SimDevice;
+import org.wpilib.hardware.bus.I2C;
+// import org.wpilib.hardware.bus.SPI;
+import org.wpilib.hardware.bus.SerialPort;
+import org.wpilib.system.Timer;
+import org.wpilib.telemetry.TelemetryLoggable;
+import org.wpilib.telemetry.TelemetryTable;
+import org.wpilib.util.UsageReporting;
+import org.wpilib.hardware.hal.HAL;
+
+import org.wpilib.hardware.hal.SimDevice;
 
 /**
  * The AHRS class provides an interface to AHRS capabilities
@@ -49,7 +49,7 @@ import edu.wpi.first.hal.SimDevice;
  * @author Scott
  */
 
-public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
+public class AHRS implements TelemetryLoggable {
 
     /**
      * Identifies one of the three sensing axes on the navX sensor board.  Note that these axes are
@@ -190,8 +190,6 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
     IOCompleteNotification  io_complete_sink;
     IOThread                io_thread;
     
-    PIDSourceType			pid_source_type = PIDSourceType.kDisplacement;
-    
     private ITimestampedDataSubscriber callbacks[];
     private Object callback_contexts[];
     private final int MAX_NUM_CALLBACKS = 3;
@@ -210,70 +208,71 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
     /* Public Interface Implementation                         */
     /***********************************************************/
     
-    /**
-     * Constructs the AHRS class using SPI communication, overriding the 
-     * default update rate with a custom rate which may be from 4 to 200, 
-     * representing the number of updates per second sent by the sensor.  
-     *<p>
-     * This constructor should be used if communicating via SPI.
-     *<p>
-     * Note that increasing the update rate may increase the 
-     * CPU utilization.
-     *<p>
-     * @param spi_port_id SPI Port to use
-     * @param update_rate_hz Custom Update Rate (Hz)
-     */
-    public AHRS(SPI.Port spi_port_id, byte update_rate_hz) {
-        commonInit(update_rate_hz);
-        if (m_simDevice != null) {
-            io = new SimIO(update_rate_hz, io_complete_sink, m_simDevice);
-        } else {
-            if (RuntimeDetector.isRaspbian() && spi_port_id == SPI.Port.kMXP) {
-                io = new RegisterIOMau(update_rate_hz, io_complete_sink, board_capabilities);
-            } else {
-                io = new RegisterIO(new RegisterIO_SPI(new SPI(spi_port_id)), update_rate_hz, io_complete_sink, board_capabilities);
-            }
-        }
-        io_thread.start();
-    }
+    // /**
+    //  * Constructs the AHRS class using SPI communication, overriding the 
+    //  * default update rate with a custom rate which may be from 4 to 200, 
+    //  * representing the number of updates per second sent by the sensor.  
+    //  *<p>
+    //  * This constructor should be used if communicating via SPI.
+    //  *<p>
+    //  * Note that increasing the update rate may increase the 
+    //  * CPU utilization.
+    //  *<p>
+    //  * @param spi_port_id SPI Port to use
+    //  * @param update_rate_hz Custom Update Rate (Hz)
+    //  */
+    // public AHRS(SPI.Port spi_port_id, byte update_rate_hz) {
+    //     commonInit(update_rate_hz);
+    //     if (m_simDevice != null) {
+    //         io = new SimIO(update_rate_hz, io_complete_sink, m_simDevice);
+    //     } else {
+    //         if (RuntimeDetector.isRaspbian() && spi_port_id == SPI.Port.kMXP) {
+    //             io = new RegisterIOMau(update_rate_hz, io_complete_sink, board_capabilities);
+    //         } else {
+    //             io = new RegisterIO(new RegisterIO_SPI(new SPI(spi_port_id)), update_rate_hz, io_complete_sink, board_capabilities);
+    //         }
+    //     }
+    //     io_thread.start();
+    // }
 
+    // /**
+    //  * The AHRS class provides an interface to AHRS capabilities
+    //  * of the KauaiLabs navX Robotics Navigation Sensor via SPI, I2C and
+    //  * Serial (TTL UART and USB) communications interfaces on the RoboRIO.
+    //  *
+    //  * The AHRS class enables access to basic connectivity and state information,
+    //  * as well as key 6-axis and 9-axis orientation information (yaw, pitch, roll,
+    //  * compass heading, fused (9-axis) heading and magnetic disturbance detection.
+    //  *
+    //  * Additionally, the ARHS class also provides access to extended information
+    //  * including linear acceleration, motion detection, rotation detection and sensor
+    //  * temperature.
+    //  *
+    //  * If used with the navX Aero, the AHRS class also provides access to
+    //  * altitude, barometric pressure and pressure sensor temperature data
+    //  *
+    //  * This constructor allows the specification of a custom SPI bitrate, in bits/second.
+    //  *
+    //  * @param spi_port_id SPI Port to use
+    //  * @param spi_bitrate SPI bitrate (Maximum:  2,000,000)
+    //  * @param update_rate_hz Custom Update Rate (Hz)
+    //  */
+    // public AHRS(SPI.Port spi_port_id, int spi_bitrate, byte update_rate_hz) {
+    //     System.out.printf("Instantiating navX-Sensor on SPI Port %s.\n", spi_port_id.toString());        
+    //     commonInit(update_rate_hz);
+    //     if (m_simDevice != null) {
+    //         io = new SimIO(update_rate_hz, io_complete_sink, m_simDevice);
+    //     } else {        
+    //         if (isRaspbian() && spi_port_id == SPI.Port.MXP) {
+    //             io = new RegisterIOMau(update_rate_hz, io_complete_sink, board_capabilities);
+    //         } else {
+    //             io = new RegisterIO(new RegisterIO_SPI(new SPI(spi_port_id), spi_bitrate), update_rate_hz, io_complete_sink, board_capabilities);
+    //         }
+    //     }
+    //     io_thread.start();
+    // }
+    
     /**
-     * The AHRS class provides an interface to AHRS capabilities
-     * of the KauaiLabs navX Robotics Navigation Sensor via SPI, I2C and
-     * Serial (TTL UART and USB) communications interfaces on the RoboRIO.
-     *
-     * The AHRS class enables access to basic connectivity and state information,
-     * as well as key 6-axis and 9-axis orientation information (yaw, pitch, roll,
-     * compass heading, fused (9-axis) heading and magnetic disturbance detection.
-     *
-     * Additionally, the ARHS class also provides access to extended information
-     * including linear acceleration, motion detection, rotation detection and sensor
-     * temperature.
-     *
-     * If used with the navX Aero, the AHRS class also provides access to
-     * altitude, barometric pressure and pressure sensor temperature data
-     *
-     * This constructor allows the specification of a custom SPI bitrate, in bits/second.
-     *
-     * @param spi_port_id SPI Port to use
-     * @param spi_bitrate SPI bitrate (Maximum:  2,000,000)
-     * @param update_rate_hz Custom Update Rate (Hz)
-     */
-
-    public AHRS(SPI.Port spi_port_id, int spi_bitrate, byte update_rate_hz) {
-        System.out.printf("Instantiating navX-Sensor on SPI Port %s.\n", spi_port_id.toString());        
-        commonInit(update_rate_hz);
-        if (m_simDevice != null) {
-            io = new SimIO(update_rate_hz, io_complete_sink, m_simDevice);
-        } else {        
-            if (RuntimeDetector.isRaspbian() && spi_port_id == SPI.Port.kMXP) {
-                io = new RegisterIOMau(update_rate_hz, io_complete_sink, board_capabilities);
-            } else {
-                io = new RegisterIO(new RegisterIO_SPI(new SPI(spi_port_id), spi_bitrate), update_rate_hz, io_complete_sink, board_capabilities);
-            }
-        }
-        io_thread.start();
-    }/**
      * Constructs the AHRS class using I2C communication, overriding the 
      * default update rate with a custom rate which may be from 4 to 200, 
      * representing the number of updates per second sent by the sensor.  
@@ -282,7 +281,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      *<p>
      * Note that increasing the update rate may increase the 
      * CPU utilization.
-     *<p>
+     *
      * @param i2c_port_id I2C Port to use
      * @param update_rate_hz Custom Update Rate (Hz)
      */
@@ -292,7 +291,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
         if (m_simDevice != null) {
             io = new SimIO(update_rate_hz, io_complete_sink, m_simDevice);
         } else {        
-            if (RuntimeDetector.isRaspbian() && i2c_port_id == I2C.Port.kMXP) {
+            if (isRaspbian() && i2c_port_id == I2C.Port.PORT_1) {
                 io = new RegisterIOMau(update_rate_hz, io_complete_sink, board_capabilities);
             } else {
                 io = new RegisterIO(new RegisterIO_I2C(new I2C(i2c_port_id, 0x32)), update_rate_hz, io_complete_sink, board_capabilities);
@@ -316,7 +315,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      *<p>
      * Note that increasing the update rate may increase the 
      * CPU utilization.
-     *<p>
+     *
      * @param serial_port_id SerialPort to use
      * @param data_type either kProcessedData or kRawData
      * @param update_rate_hz Custom Update Rate (Hz)
@@ -327,7 +326,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
         if (m_simDevice != null) {
             io = new SimIO(update_rate_hz, io_complete_sink, m_simDevice);
         } else {        
-            if (RuntimeDetector.isRaspbian() && serial_port_id == SerialPort.Port.kMXP) {
+            if (isRaspbian() && serial_port_id == SerialPort.Port.MXP) {
                 io = new RegisterIOMau(NAVX_DEFAULT_UPDATE_RATE_HZ, io_complete_sink, board_capabilities);
             } else {
                 boolean processed_data = (data_type == SerialDataType.kProcessedData);
@@ -340,29 +339,29 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
     /**
      * Constructs the AHRS class using SPI communication and the default update rate.  
      *<p>
-     * This constructor should be used if communicating via SPI.
+     * This constructor should be used if communicating via I2C.
      */
     public AHRS() {
-	this(SPI.Port.kMXP);
+        this(I2C.Port.PORT_0);
     }
 
-    /**
-     * Constructs the AHRS class using SPI communication and the default update rate.  
-     *<p>
-     * This constructor should be used if communicating via SPI.
-     *<p>
-     * @param spi_port_id SPI port to use.
-     */
-    public AHRS(SPI.Port spi_port_id) {
-        this(spi_port_id, NAVX_DEFAULT_UPDATE_RATE_HZ);
-    }
+    // /**
+    //  * Constructs the AHRS class using SPI communication and the default update rate.  
+    //  *<p>
+    //  * This constructor should be used if communicating via SPI.
+    //  *<p>
+    //  * @param spi_port_id SPI port to use.
+    //  */
+    // public AHRS(SPI.Port spi_port_id) {
+    //     this(spi_port_id, NAVX_DEFAULT_UPDATE_RATE_HZ);
+    // }
     
 
     /**
      * Constructs the AHRS class using I2C communication and the default update rate.  
      *<p>
      * This constructor should be used if communicating via I2C.
-     *<p>
+     *
      * @param i2c_port_id I2C port to use
      */
     public AHRS(I2C.Port i2c_port_id) {
@@ -376,11 +375,28 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      *<p>
      * This constructor should be used if communicating via either 
      * TTL UART or USB Serial interface.
-     *<p>
+     *
      * @param serial_port_id SerialPort to use
      */
     public AHRS(SerialPort.Port serial_port_id) {
         this(serial_port_id, SerialDataType.kProcessedData, NAVX_DEFAULT_UPDATE_RATE_HZ);
+    }
+
+    /**
+     * Checks if the current platform is Raspbian
+     *
+     * @return true if Raspbian was detected
+     */
+    protected static boolean isRaspbian() {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get("/etc/os-release"))) {
+            String value = reader.readLine();
+            if (value == null) {
+                return false;
+            }
+            return value.contains("Raspbian");
+        } catch (IOException ex) {
+            return false;
+        }
     }
     
     /**
@@ -455,7 +471,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * interfere with the calibration process.
      */
     public void zeroYaw() {
-        double curr_timestamp = Timer.getFPGATimestamp();
+        double curr_timestamp = Timer.getMonotonicTimestamp();
         double delta_time_since_last_yawreset_request = curr_timestamp - last_yawreset_request_timestamp;
         if (delta_time_since_last_yawreset_request < SUPPRESSED_SUCESSIVE_YAWRESET_PERIOD_SECONDS) {
             successive_suppressed_yawreset_request_count++;
@@ -504,7 +520,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      *<p>
      * Once calibration is complete, the sensor will automatically remove 
      * an internal yaw offset value from all reported values.
-     *<p>
+     *
      * @return Returns true if the sensor is currently automatically 
      * calibrating the gyro and accelerometer sensors.
      */
@@ -518,7 +534,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * Indicates whether the sensor is currently connected
      * to the host computer.  A connection is considered established
      * whenever communication with the sensor has occurred recently.
-     *<p>
+     *
      * @return Returns true if a valid update has been recently received
      * from the sensor.
      */
@@ -618,7 +634,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * the same reference frame as the current yaw value.  The resulting
      * value represents the current acceleration in the x-axis of the
      * body (e.g., the robot) on which the sensor is mounted.
-     *<p>
+     *
      * @return Current world linear acceleration in the X-axis (in G).
      */
     public float getWorldLinearAccelX()
@@ -634,7 +650,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * the same reference frame as the current yaw value.  The resulting
      * value represents the current acceleration in the Y-axis of the
      * body (e.g., the robot) on which the sensor is mounted.
-     *<p>
+     *
      * @return Current world linear acceleration in the Y-axis (in G).
      */
     public float getWorldLinearAccelY()
@@ -650,7 +666,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * the same reference frame as the current yaw value.  The resulting
      * value represents the current acceleration in the Z-axis of the
      * body (e.g., the robot) on which the sensor is mounted.
-     *<p>
+     *
      * @return Current world linear acceleration in the Z-axis (in G).
      */
     public float getWorldLinearAccelZ()
@@ -663,7 +679,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * based upon the X and Y-axis world linear acceleration values.
      * If the sum of the absolute values of the X and Y axis exceed
      * a "motion threshold", the motion state is indicated.
-     *<p>
+     *
      * @return Returns true if the sensor is currently detecting motion.
      */
     public boolean isMoving()
@@ -679,7 +695,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * Yaw Rotation can occur either when the sensor is rotating, or
      * when the sensor is not rotating AND the current gyro calibration
      * is insufficiently calibrated to yield the standard yaw drift rate.
-     *<p>
+     *
      * @return Returns true if the sensor is currently detecting motion.
      */
     public boolean isRotating()
@@ -708,7 +724,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * NOTE:  This value is only valid sensors including a pressure
      * sensor.  To determine whether this value is valid, see 
      * isAltitudeValid().
-     *<p>
+     *
      * @return Returns current altitude in meters (as long as the sensor includes 
      * an installed on-board pressure sensor).
      */
@@ -724,7 +740,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      *<p>
      * If this value is false for a board with an installed pressure sensor, 
      * this indicates a malfunction of the onboard pressure sensor.
-     *<p>
+     *
      * @return Returns true if a working pressure sensor is installed.
      */
     public boolean isAltitudeValid()
@@ -774,7 +790,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * Note that if this function does indicate the magnetometer is calibrated,
      * this does not necessarily mean that the calibration quality is sufficient
      * to yield valid compass headings.
-     *<p>
+     *
      * @return Returns true if magnetometer calibration has been performed.
      */   
     public boolean isMagnetometerCalibrated()
@@ -1009,7 +1025,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
     /***********************************************************/
 
     private void commonInit( byte update_rate_hz ) {
-		HAL.report(tResourceType.kResourceType_NavX, 0);
+        UsageReporting.reportUsage("navX", "");
         this.board_capabilities = new BoardCapabilities();
         this.io_complete_sink = new IOCompleteNotification();
         this.io_thread = new IOThread();
@@ -1025,36 +1041,9 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
         this.successive_suppressed_yawreset_request_count = 0;        
         this.disconnect_startupcalibration_recovery_pending = false;
         this.logging_enabled = false;
-        setName("navX-Sensor");
 
         // Construct SimDevice (only succeeds in simulation environments)
         m_simDevice = SimDevice.create("navX-Sensor", 0);     
-    }
-
-    /***********************************************************/
-    /* PIDSource Interface Implementation                      */
-    /***********************************************************/
-    
-    public PIDSourceType getPIDSourceType() {
-    	return pid_source_type;
-    }
-    
-    public void setPIDSourceType(PIDSourceType type) {
-    	pid_source_type = type;
-    }
-    
-    /**
-     * Returns the current yaw value reported by the sensor.  This
-     * yaw value is useful for implementing features including "auto rotate 
-     * to a known angle".
-     * @return The current yaw angle in degrees (-180 to 180).
-     */
-    public double pidGet() {
-    	if ( pid_source_type == PIDSourceType.kRate ) {
-    		return getRate();
-    	} else {
-    		return getYaw();
-    	}
     }
 
     /**
@@ -1068,7 +1057,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * Note that the returned yaw value will be offset by a user-specified
      * offset value; this user-specified offset value is set by 
      * invoking the zeroYaw() method.
-     *<p>
+     *
      * @return The current total accumulated yaw angle (Z axis) of the robot 
      * in degrees. This heading is based on integration of the returned rate 
      * from the Z-axis (yaw) gyro.
@@ -1082,7 +1071,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * Return the rate of rotation of the yaw (Z-axis) gyro, in degrees per second.
      *<p>
      * The rate is based on the most recent reading of the yaw gyro angle.
-     *<p>
+     *
      * @return The current rate of change in yaw angle (in degrees per second)
      */
 
@@ -1148,7 +1137,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * value is un-processed, and should only be accessed by advanced users.
      * Typically, rotation about the X Axis is referred to as "Pitch".  Calibrated
      * and Integrated Pitch data is accessible via the {@link #getPitch()} method.  
-     *<p>
+     *
      * @return Returns the current rotation rate (in degrees/sec).
      */
     public float getRawGyroX() {
@@ -1160,7 +1149,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * value is un-processed, and should only be accessed by advanced users.
      * Typically, rotation about the T Axis is referred to as "Roll".  Calibrated
      * and Integrated Pitch data is accessible via the {@link #getRoll()} method.  
-     *<p>
+     *
      * @return Returns the current rotation rate (in degrees/sec).
      */
     public float getRawGyroY() {
@@ -1172,7 +1161,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * value is un-processed, and should only be accessed by advanced users.
      * Typically, rotation about the T Axis is referred to as "Yaw".  Calibrated
      * and Integrated Pitch data is accessible via the {@link #getYaw()} method.  
-     *<p>
+     *
      * @return Returns the current rotation rate (in degrees/sec).
      */
     public float getRawGyroZ() {
@@ -1185,7 +1174,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * has not had acceleration due to gravity removed from it, and has not been rotated to
      * the world reference frame.  Gravity-corrected, world reference frame-corrected 
      * X axis acceleration data is accessible via the {@link #getWorldLinearAccelX()} method.
-     *<p>
+     *
      * @return Returns the current acceleration rate (in G).
      */
     public float getRawAccelX() {
@@ -1198,7 +1187,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * has not had acceleration due to gravity removed from it, and has not been rotated to
      * the world reference frame.  Gravity-corrected, world reference frame-corrected 
      * Y axis acceleration data is accessible via the {@link #getWorldLinearAccelY()} method.
-     *<p>
+     *
      * @return Returns the current acceleration rate (in G).
      */
     public float getRawAccelY() {
@@ -1211,7 +1200,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * has not had acceleration due to gravity removed from it, and has not been rotated to
      * the world reference frame.  Gravity-corrected, world reference frame-corrected 
      * Z axis acceleration data is accessible via the {@link #getWorldLinearAccelZ()} method.
-     *<p>
+     *
      * @return Returns the current acceleration rate (in G).
      */
     public float getRawAccelZ() {
@@ -1226,7 +1215,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * has not been tilt-corrected, and has not been combined with the other magnetometer axis
      * data to yield a compass heading.  Tilt-corrected compass heading data is accessible 
      * via the {@link #getCompassHeading()} method.
-     *<p>
+     *
      * @return Returns the mag field strength (in uTesla).
      */
     public float getRawMagX() {
@@ -1239,7 +1228,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * has not been tilt-corrected, and has not been combined with the other magnetometer axis
      * data to yield a compass heading.  Tilt-corrected compass heading data is accessible 
      * via the {@link #getCompassHeading()} method.
-     *<p>
+     *
      * @return Returns the mag field strength (in uTesla).
      */
     public float getRawMagY() {
@@ -1252,7 +1241,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * has not been tilt-corrected, and has not been combined with the other magnetometer axis
      * data to yield a compass heading.  Tilt-corrected compass heading data is accessible 
      * via the {@link #getCompassHeading()} method.
-     *<p>
+     *
      * @return Returns the mag field strength (in uTesla).
      */
     public float getRawMagZ() {
@@ -1278,7 +1267,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      *<p>
      * This value may be useful in order to perform advanced temperature-
      * correction of raw gyroscope and accelerometer values.
-     *<p>
+     *
      * @return The current temperature (in degrees centigrade).
      */
     public float getTempC()
@@ -1295,7 +1284,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * For more information on Omnimount, please see:
      *<p>
      * http://navx-mxp.kauailabs.com/navx-mxp/installation/omnimount/
-     *<p>
+     *
      * @return The currently-configured board yaw axis/direction.
      */
     public BoardYawAxis getBoardYawAxis() {
@@ -1331,7 +1320,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
      * To update the firmware to the latest version, please see:
      *<p>
      *   http://navx-mxp.kauailabs.com/navx-mxp/support/updating-firmware/
-     *<p>
+     *
      * @return The firmware version in the format [MajorVersion].[MinorVersion]
      */
     public String getFirmwareVersion() {
@@ -1541,7 +1530,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
             for (int i = 0; i < callbacks.length; i++) {
                 ITimestampedDataSubscriber callback = callbacks[i];
                 if (callback != null) {
-                	long system_timestamp = (long)(Timer.getFPGATimestamp() * 1000);
+                	long system_timestamp = (long)(Timer.getMonotonicTimestamp() * 1000);
                     callback.timestampedDataReceived(system_timestamp,
                     		sensor_timestamp,
                     		ahrs_update,
@@ -1645,7 +1634,7 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
             for (int i = 0; i < callbacks.length; i++) {
                 ITimestampedDataSubscriber callback = callbacks[i];
                 if (callback != null) {
-                	long system_timestamp = (long)(Timer.getFPGATimestamp() * 1000);
+                	long system_timestamp = (long)(Timer.getMonotonicTimestamp() * 1000);
                     callback.timestampedDataReceived(system_timestamp,
                     		sensor_timestamp,
                     		ahrs_update,
@@ -1741,24 +1730,16 @@ public class AHRS extends SendableBase implements PIDSource, Sendable, Gyro {
     };
     
     /***********************************************************/
-    /* Sendable Interface Implementation             */
+    /* TelemetryLoggable Interface Implementation              */
     /***********************************************************/
 
-    /**
-     * Initializes smart dashboard communication.
-     *
-     * @param builder The SendableBuilder which will be registered with.
-     */     
-	@Override
-	public void initSendable(SendableBuilder builder) {
-		builder.setSmartDashboardType("Gyro");
-		builder.addDoubleProperty("Value", this::getYaw, null);
+    @Override
+    public String getTelemetryType() {
+        return "Gyro";
     }
 
-    /************************************************************/
-    /* Gyro interface Implementation                            */
-    /************************************************************/
     @Override
-    public void calibrate() {        
-    }    
+    public void logTo(TelemetryTable table) {
+        table.log("Value", getYaw());
+    }
 }

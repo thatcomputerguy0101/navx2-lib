@@ -13,7 +13,7 @@ import com.kauailabs.navx.AHRSProtocol;
 import com.kauailabs.navx.IMUProtocol;
 import com.kauailabs.navx.IMURegisters;
 
-import edu.wpi.first.wpilibj.Timer;
+import org.wpilib.system.Timer;
 
 class RegisterIO implements IIOProvider {
     IRegisterIO io_provider;
@@ -203,7 +203,7 @@ class RegisterIO implements IIOProvider {
             raw_data_update.temp_c      = ahrspos_update.mpu_temp;
             notify_sink.setRawData(raw_data_update, sensor_timestamp);
             
-            this.last_update_time = Timer.getFPGATimestamp();
+            this.last_update_time = Timer.getMonotonicTimestamp();
             byte_count += curr_data.length;
             update_count++;
         }
@@ -216,7 +216,7 @@ class RegisterIO implements IIOProvider {
 
     @Override
     public boolean isConnected() {
-        double time_since_last_update = Timer.getFPGATimestamp() - this.last_update_time;
+        double time_since_last_update = Timer.getMonotonicTimestamp() - this.last_update_time;
         return time_since_last_update <= IO_TIMEOUT_SECONDS;
     }
 

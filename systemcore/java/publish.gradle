@@ -4,8 +4,8 @@ apply plugin: 'signing'
 
 ext.licenseFile = files("$rootDir/LICENSE.txt")
 
-// Retrieve version number from core navxmxp build version.txt file
-def pubVersion = rootProject.file("${System.getProperty('user.home')}/Documents/Github/navxmxp/build/version.txt").text.trim()
+// Retrieve version number from core navx2 build version.txt file
+def pubVersion = rootProject.file("../version.txt").text.trim()
 
 def outputsFolder = file("$buildDir/libs")
 
@@ -56,7 +56,7 @@ def customizePom(pom) {
         }
 
         root.dependencies.dependency.each {
-            if (it.groupId.first().value().first().startsWith('edu.wpi.first')) {
+            if (it.groupId.first().value().first().startsWith('org.wpilib')) {
                 assert it.parent().remove(it)
             }
         }		
@@ -99,12 +99,12 @@ def customizePom(pom) {
 
 task sourcesJar(type: Jar) {
     from sourceSets.main.allJava
-    classifier = 'sources'
+    archiveClassifier = 'sources'
 }
 
 task javadocJar(type: Jar) {
     from javadoc
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
 }
 
 artifacts {
@@ -122,22 +122,20 @@ model {
     tasks.generatePomFileForMavenJavaPublication {
         destination = file("$buildDir/generated-pom.xml")
     }
-	/*
     tasks.publishMavenJavaPublicationToMavenLocal {
         dependsOn project.tasks.signArchives
     }
     tasks.publishMavenJavaPublicationToMavenRepository {
         dependsOn project.tasks.signArchives
     }
-	*/
     publishing {
         repositories {
             maven {
                 url "${projectDir}/../../../publish/maven"
 				url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
 				credentials {
-					username sonatypeUsername
-					password sonatypePassword
+					username System.getenv("sonatypeUsername")
+					password System.getenv("sonatypePassword")
 				}
 			}
         }
@@ -151,33 +149,32 @@ model {
 				from components.java
 				artifact sourcesJar
 				artifact javadocJar
-/*
-				// create the sign pom artifact
-				pom.withXml {
-					def pomFile = file("${project.buildDir}/generated-pom.xml")
-					writeTo(pomFile)
-					def pomAscFile = signing.sign(pomFile).signatureFiles[0]
-					artifact(pomAscFile) {
-						classifier = null
-						extension = 'pom.asc'
-					}
-				}			
-				components.java.each {
-					print it.getName()
-				}
-				// create the signed artifacts
-				project.tasks.signArchives.signatureFiles.each {
-					artifact(it) {
-						def matcher = it.file =~ /-(sources|javadoc)\.jar.asc$/
-						if (matcher.find()) {
-							classifier = matcher.group(1)
-						} else {
-							classifier = null
-						}
-						extension = 'jar.asc'
-					}
-				}
-*/				
+
+				// // create the sign pom artifact
+				// pom.withXml {
+				// 	def pomFile = file("${project.buildDir}/generated-pom.xml")
+				// 	writeTo(pomFile)
+				// 	def pomAscFile = signing.sign(pomFile).signatureFiles[0]
+				// 	artifact(pomAscFile) {
+				// 		classifier = null
+				// 		extension = 'pom.asc'
+				// 	}
+				// }			
+				// components.java.each {
+				// 	print it.getName()
+				// }
+				// // create the signed artifacts
+				// project.tasks.signArchives.signatureFiles.each {
+				// 	artifact(it) {
+				// 		def matcher = it.file =~ /-(sources|javadoc)\.jar.asc$/
+				// 		if (matcher.find()) {
+				// 			classifier = matcher.group(1)
+				// 		} else {
+				// 			classifier = null
+				// 		}
+				// 		extension = 'jar.asc'
+				// 	}
+				// }
             }
         }
     }

@@ -7,8 +7,11 @@
 
 plugins {
     id "java-library"
-    id 'edu.wpi.first.wpilib.repositories.WPILibRepositoriesPlugin' version '2020.2'
+    id 'org.wpilib.WPILibRepositoriesPlugin' version '2027.0.0'
 }
+
+// WPILib Version
+ext.wpilibVersion = "2027.0.0-alpha-7"
 
 repositories {
     mavenCentral()
@@ -24,13 +27,12 @@ task generateJavadocs(type: Javadoc) {
 }
 */
 dependencies {
-    api 'edu.wpi.first.cscore:cscore-java:2020.+'
-    api 'edu.wpi.first.cameraserver:cameraserver-java:2020.+'
-    api 'edu.wpi.first.ntcore:ntcore-java:2020.+'
-    api 'edu.wpi.first.wpilibj:wpilibj-java:2020.+'
-    api 'edu.wpi.first.wpiutil:wpiutil-java:2020.+'
-    api 'edu.wpi.first.hal:hal-java:2020.+'
-    api 'edu.wpi.first.thirdparty.frc2020.opencv:opencv-java:3.4.7-2'
+    api "org.wpilib.wpilibj:wpilibj-java:${wpilibVersion}"
+    api "org.wpilib.ntcore:ntcore-java:${wpilibVersion}"
+    api "org.wpilib.wpiutil:wpiutil-java:${wpilibVersion}"
+    api "org.wpilib.telemetry:telemetry-java:${wpilibVersion}"
+    api "org.wpilib.wpiunits:wpiunits-java:${wpilibVersion}"
+    api "org.wpilib.hal:hal-java:${wpilibVersion}"
 }
 
 tasks.withType(GenerateModuleMetadata) {
@@ -40,7 +42,7 @@ tasks.withType(GenerateModuleMetadata) {
 sourceSets {
     main {
         java {
-            srcDirs = ['../../../java/navx/src', 'src']
+            srcDirs = ['../../protocol/java/src', 'src']
         }
     }
 }
@@ -50,5 +52,5 @@ sourceSets {
 apply from: 'publish.gradle'
 
 wrapper {
-  gradleVersion = '6.0'
+  gradleVersion = '9.4.1'
 }

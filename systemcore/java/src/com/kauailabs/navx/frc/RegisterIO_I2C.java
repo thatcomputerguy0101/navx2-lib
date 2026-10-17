@@ -9,7 +9,7 @@
 /*----------------------------------------------------------------------------*/
 package com.kauailabs.navx.frc;
 
-import edu.wpi.first.wpilibj.I2C;
+import org.wpilib.hardware.bus.I2C;
 
 class RegisterIO_I2C implements IRegisterIO{
 

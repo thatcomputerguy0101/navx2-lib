@@ -16,7 +16,7 @@ import com.kauailabs.navx.AHRSProtocol;
 import com.kauailabs.navx.IMUProtocol;
 import com.kauailabs.navx.IMURegisters;
 
-import edu.wpi.first.wpilibj.Timer;
+import org.wpilib.system.Timer;
 
 class RegisterIOMau implements IIOProvider {
 
@@ -218,7 +218,7 @@ class RegisterIOMau implements IIOProvider {
             raw_data_update.temp_c      = ahrspos_update.mpu_temp;
             notify_sink.setRawData(raw_data_update, sensor_timestamp);
             
-            this.last_update_time = Timer.getFPGATimestamp();
+            this.last_update_time = Timer.getMonotonicTimestamp();
             return true;
         }
         return false;
