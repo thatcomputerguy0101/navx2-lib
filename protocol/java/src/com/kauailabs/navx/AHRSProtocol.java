@@ -24,7 +24,7 @@
 
 package com.kauailabs.navx;
 
-
+@SuppressWarnings("doclint:missing")
 public class AHRSProtocol extends IMUProtocol {
 
 	/* NAVX_CAL_STATUS */

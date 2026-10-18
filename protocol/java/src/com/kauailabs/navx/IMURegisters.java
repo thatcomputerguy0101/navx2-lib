@@ -23,6 +23,7 @@
  */
 package com.kauailabs.navx;
 
+@SuppressWarnings("doclint:missing")
 public class IMURegisters {
 
 	/**********************************************/

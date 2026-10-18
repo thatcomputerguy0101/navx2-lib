@@ -23,6 +23,7 @@
  */
 package com.kauailabs.navx;
 
+@SuppressWarnings("doclint:missing")
 public class IMUProtocol {
 
     public final static byte PACKET_START_CHAR =        '!';
