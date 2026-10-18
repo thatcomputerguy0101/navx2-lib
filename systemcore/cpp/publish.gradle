@@ -101,6 +101,10 @@ task cppHeadersZip(type: Zip) {
     from('include') {
         into '/'
     }
+
+    from('../../protocol/cpp/include') {
+        into '/'
+    }
 }
 
 task cppSourcesZip(type: Zip) {
