@@ -19,7 +19,7 @@ cd navx/systemcore
 ./gradlew publishToMavenLocal
 ```
 
-From one of the devices that you just built the library on, copy the generated vendor JSON from `navx/systemcore/build/generated/vendordeps/navx_frc.json` into your robot project's `vendordeps` folder.
+From one of the devices that you just built the library on, copy the generated vendor JSON from `navx/systemcore/build/generated/vendordeps/navx_frc.json` into your robot project's `vendordeps` folder. You may also need to add your resolved maven local path (the expansion of `~/.m2/repository`) to the `mavenUrls` list in the vendordep file.
 
 ## API Changes
 
