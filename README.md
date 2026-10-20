@@ -31,7 +31,7 @@ The only protocol supported by both NavX2 and WPILib 2027_a7 is I2C. Theoretical
 
 ### Official Systemcore
 
-Connect V+, GND, SDA, and SCL to either of the I2C ports on Systemcore. Note, SDA and SCL are in the opposite order on NavX2 compared to Systemcore, so it may be necessary to rearrange pins if using a pre-wired cable. https://www.revrobotics.com/rev-11-1729/ has the correct pin arrangement.
+Connect V+, GND, SDA, and SCL to either of the I2C ports on Systemcore. Note, SDA and SCL are in the opposite order on NavX2-MXP compared to Systemcore, so it may be necessary to rearrange pins if using a pre-wired cable. https://www.revrobotics.com/rev-11-1729/ has the correct pin arrangement. NavX2-Micro has V+ and SCL flipped with respect to Systemcore. [The cable packaged with a NavX2-Micro](https://www.studica.com/navx2-micro-adapter-cable-for-control-expansion-hub) has this pin arrangement.
 
 ### DIY Systemcore (RPi5)
 
