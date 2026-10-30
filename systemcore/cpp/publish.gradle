@@ -139,9 +139,9 @@ model {
     tasks.generatePomFileForCppPublication {
         destination = file("$buildDir/generated-pom.xml")
     }
-    tasks.publishCppPublicationToMavenRepository {
-        dependsOn project.tasks.signArchives
-    }
+    // tasks.publishCppPublicationToMavenRepository {
+    //     dependsOn project.tasks.signArchives
+    // }
     publishing {
         def navXTaskList = createComponentZipTasks($.components, ['navx_frc'], zipBaseName, Zip, project, includeStandardZipFormat)
 
@@ -152,12 +152,15 @@ model {
         }
 
         repositories {
+            // maven {
+			// 	url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+			// 	credentials {
+			// 		username System.getenv("sonatypeUsername")
+			// 		password System.getenv("sonatypePassword")
+			// 	}
+            // }
             maven {
-				url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-				credentials {
-					username System.getenv("sonatypeUsername")
-					password System.getenv("sonatypePassword")
-				}
+                url = rootProject.layout.buildDirectory.dir("outputs/maven")
             }
 		}
 

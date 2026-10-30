@@ -119,18 +119,21 @@ model {
     tasks.generatePomFileForMavenJavaPublication {
         destination = file("$buildDir/generated-pom.xml")
     }
-    tasks.publishMavenJavaPublicationToMavenRepository {
-        dependsOn project.tasks.signArchives
-    }
+    // tasks.publishMavenJavaPublicationToMavenRepository {
+    //     dependsOn project.tasks.signArchives
+    // }
     publishing {
         repositories {
+            // maven {
+			// 	url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+			// 	credentials {
+			// 		username System.getenv("sonatypeUsername")
+			// 		password System.getenv("sonatypePassword")
+			// 	}
+			// }
             maven {
-				url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-				credentials {
-					username System.getenv("sonatypeUsername")
-					password System.getenv("sonatypePassword")
-				}
-			}
+                url = rootProject.layout.buildDirectory.dir("outputs/maven")
+            }
         }
 
         publications {

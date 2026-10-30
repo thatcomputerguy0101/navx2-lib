@@ -28,6 +28,7 @@ task generateVendorJson() {
     def read = navx_frcFileInput.text
             .replace('0.0.000', pubVersion)
             .replace('0000', wpilibYear)
+            .replace('USERNAME', System.getenv("GITHUB_ACTOR") ?: project.findProperty("gpr.user"))
     navx_frcFileOutput.text = read
 
     outputs.upToDateWhen { false }
