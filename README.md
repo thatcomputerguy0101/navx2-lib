@@ -8,18 +8,7 @@ This will probably not continue to be maintained, since its intended use case is
 
 ## Installation
 
-This is not an officially released library, so using it will require building from source and using a locally-published artifact.
-
-On each computer that you intend on building your robot project from:
-
-```bash
-git clone https://github.com/thatcomputerguy0101/navx
-cd navx/systemcore
-./gradlew installSystemCoreToolchain # Only needed if using C++
-./gradlew publishToMavenLocal
-```
-
-From one of the devices that you just built the library on, copy the generated vendor JSON from `navx/systemcore/build/generated/vendordeps/navx_frc.json` into your robot project's `vendordeps` folder. You may also need to add your resolved maven local path (the expansion of `~/.m2/repository`) to the `mavenUrls` list in the vendordep file.
+From your robot project, run the `WPILib: Manage Vendor Libraries` VSCode command, then select `Install new libraries (online)`. Paste `https://raw.githubusercontent.com/thatcomputerguy0101/navx2-lib/master/systemcore/releases/2027_alpha7/navx_frc.json` into the input that appears to download the vendor JSON and install the library in your robot project.
 
 ## API Changes
 
