@@ -1,0 +1,229 @@
+name: Systemcore Build
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  validation:
+    name: "Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: gradle/actions/wrapper-validation@v5
+
+  build-vendorjson:
+    name: "Build Vendor JSON"
+    runs-on: ubuntu-26.04
+    needs: [validation]
+    defaults:
+      run:
+        working-directory: ./systemcore
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 25
+          distribution: temurin
+
+      # Generate the JSON and add the version to its name
+      - run: |
+          ./gradlew generateVendorJson
+          mv build/generated/vendordeps/navx_frc.json build/generated/vendordeps/navx_frc-$(git describe --tags --match=v*).json
+
+      - uses: actions/upload-artifact@v7
+        with:
+          archive: false
+          path: systemcore/build/generated/vendordeps/navx_frc-*.json
+          if-no-files-found: error
+
+  build-gradle-host:
+    env:
+      MACOSX_DEPLOYMENT_TARGET: 14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact-name: Windows-x64
+
+          - os: macos-26
+            artifact-name: macOS
+
+    name: "Gradle - Build Host - ${{ matrix.artifact-name }}"
+    runs-on: ${{ matrix.os }}
+    needs: [validation]
+    defaults:
+      run:
+        working-directory: ./systemcore
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: 25
+          distribution: temurin
+
+      - name: Build with Gradle
+        run: ./gradlew build
+
+      - name: Publish
+        run: ./gradlew publish
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: maven-${{ matrix.artifact-name }}
+          path: systemcore/build/outputs/maven/
+          if-no-files-found: error
+
+  build-gradle-docker:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container: wpilib/systemcore-cross-debian:trixie
+            artifact-name: Linux-Systemcore
+            build-options: "-Ponlylinuxsystemcore"
+
+          - container: wpilib/aarch64-cross-debian:trixie
+            artifact-name: Linux-aarch64
+            build-options: "-Ponlylinuxarm64"
+
+          - container: wpilib/systemcore-cross-debian:trixie
+            artifact-name: Linux-x86-64
+            build-options: "-Ponlylinuxx86-64"
+
+    runs-on: ubuntu-26.04
+    container: ${{ matrix.container }}
+    name: "Gradle - Build Docker - ${{ matrix.artifact-name }}"
+    needs: [validation]
+    defaults:
+      run:
+        working-directory: ./systemcore
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Build with Gradle
+        run: ./gradlew build ${{ matrix.build-options }}
+
+      - name: Publish
+        run: ./gradlew publish ${{ matrix.build-options }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: maven-${{ matrix.artifact-name }}
+          path: systemcore/build/outputs/maven/
+          if-no-files-found: error
+
+  combine:
+    name: Combine
+    needs: [build-gradle-docker, build-gradle-host]
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      # download all maven-* artifacts to maven/
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+          path: maven
+          pattern: maven-*
+
+      - run: find
+
+      - name: ZIP offline bundle
+        run: zip -r navx_frc-$(git describe --tags --match=v*).zip .  
+        working-directory: maven
+
+      - run: ls maven
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: navx_frc-offline
+          path: maven/*.zip
+          if-no-files-found: error
+
+  maven-release:
+    name: Maven Release
+    needs: [build-gradle-docker, build-gradle-host]
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - id: get-version
+        run: echo "version=$(git describe --tags --match=v*)" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v6
+        with:
+          ref: maven
+
+      # download all maven-* artifacts to root
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+          pattern: maven-*
+
+      # Commit to maven branch (which acts like a maven repository)
+      - uses: github-actions-x/commit@v2.9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "${{ steps.get-version.outputs.version }}"
+          push-branch: maven
+          name: "GitHub Actions"
+
+  release:
+    name: Release
+    needs: [build-vendorjson, combine]
+    if: (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) && github.repository == 'thatcomputerguy0101/navx2-lib'
+    permissions:
+      contents: write
+    runs-on: ubuntu-26.04
+    steps:
+      # Download offline navx_frc library
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+          pattern: navx_frc-offline
+
+      # Download vendor json
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: navx_frc-*.json
+
+      - run: find
+
+      # Push to dev release
+      - uses: pyTooling/Actions/releaser@r6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: 'Dev'
+          rm: true
+          snapshots: false
+          files: |
+            **/navx_frc-*.json
+            **/navx_frc-*.zip
+        if: github.event_name == 'push'
